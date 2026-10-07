@@ -1,0 +1,73 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Client app secrets, dependencies, and generated files
+/client/node_modules/
+/client/.next/
+/client/out/
+/client/build/
+/client/coverage/
+/client/.vercel/
+/client/.env*
+!/client/.env.example
+/client/*.tsbuildinfo
+/client/next-env.d.ts
+
+# Server secrets, dependencies, and generated files
+/server/node_modules/
+/server/dist/
+/server/coverage/
+/server/.env*
+!/server/.env.example
+/server/drizzle/meta/
+/server/*firebase-adminsdk*.json
+/server/*service-account*.json
+/server/*serviceAccount*.json
+
+# Legacy backend secrets and generated files
+/backend/.env
+/backend/node_modules/
+/backend/dist/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
