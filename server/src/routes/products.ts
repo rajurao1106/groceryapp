@@ -3,7 +3,11 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { db } from "../db/client.js";
 import { products } from "../db/schema.js";
-import { invalidateProductCache, PRODUCT_CACHE_KEY, PRODUCT_CACHE_TTL_SECONDS, redis } from "../plugins/redis.js";
+import {
+  invalidateProductCache,
+  readProductCache,
+  writeProductCache,
+} from "../plugins/redis.js";
 import { requireAdminSession } from "../plugins/admin-auth.js";
 import {
   createProductImageUploadSignature,
@@ -52,14 +56,12 @@ function toAdminProduct(row: typeof products.$inferSelect) {
 }
 
 async function listProducts() {
-  const cached = await redis?.get(PRODUCT_CACHE_KEY);
+  const cached = await readProductCache();
   if (cached) return JSON.parse(cached) as ReturnType<typeof toAdminProduct>[];
 
   const rows = await db.select().from(products).orderBy(asc(products.id));
   const result = rows.map(toAdminProduct);
-  if (redis) {
-    await redis.set(PRODUCT_CACHE_KEY, JSON.stringify(result), "EX", PRODUCT_CACHE_TTL_SECONDS);
-  }
+  await writeProductCache(JSON.stringify(result));
   return result;
 }
 

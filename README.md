@@ -134,7 +134,10 @@ Preview environments that need the API):
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`
   for admin product image uploads. Keep the API secret server-side; the admin
   browser receives only a short-lived upload signature and public API key.
-- `REDIS_URL` is optional; omit it to run without the product cache.
+- `REDIS_URL` is optional; omit it to run without the product cache. Do not set
+  it to `redis://localhost:6379` on Vercel; that address points inside the
+  serverless instance, not to your development computer. Redis failures are
+  logged and the catalog falls back to PostgreSQL.
 
 After deployment, verify `/health` returns `{"status":"ok"}` and point the
 Flutter app's `API_BASE_URL` build define to `https://<your-vercel-domain>/api`.

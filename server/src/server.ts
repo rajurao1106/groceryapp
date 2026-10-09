@@ -9,7 +9,6 @@ const host = process.env.HOST ?? "0.0.0.0";
 
 try {
   await pool.query("select 1");
-  if (redis) await redis.connect();
   await app.listen({ port, host });
 } catch (error) {
   app.log.error(error, "Backend startup failed.");

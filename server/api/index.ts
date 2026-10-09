@@ -1,11 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { buildApp } from "../src/app.js";
-import { redis } from "../src/plugins/redis.js";
 
 const appPromise = buildApp().then(async (app) => {
-  if (redis?.status === "wait") {
-    await redis.connect();
-  }
   await app.ready();
   return app;
 });
