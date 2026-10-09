@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import Image from "next/image";
 import { AdminIcon, AdminSidebar, AdminTopbar } from "@/components/admin-chrome";
 import { useProductCatalog, type Product, type ProductInput, type ProductStatus } from "@/components/product-catalog-provider";
 import { AdminLoginGate } from "@/components/admin-login-gate";
+import { deleteProductImage, uploadProductImage } from "@/lib/cloudinary-upload";
 
 const categories = ["All products", "Fruits", "Vegetables", "Dairy", "Bakery", "Pantry"];
 const statusFilters = ["All", "Active", "Draft", "Out of stock"] as const;
@@ -43,10 +45,12 @@ function DeleteProductDialog({ product, onClose, onConfirm }: {
 function ProductModal({ product, onClose, onSave }: {
   product: Product | null;
   onClose: () => void;
-  onSave: (event: FormEvent<HTMLFormElement>) => Promise<string | null>;
+  onSave: (event: FormEvent<HTMLFormElement>, image: { file: File | null; remove: boolean }) => Promise<string | null>;
 }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -68,7 +72,7 @@ function ProductModal({ product, onClose, onSave }: {
     }
     setSaving(true);
     try {
-      const saveError = await onSave(event);
+      const saveError = await onSave(event, { file: selectedImage, remove: removeImage });
       setError(saveError ?? "");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to save product.");
@@ -94,7 +98,40 @@ function ProductModal({ product, onClose, onSave }: {
             <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]"><span>Selling price (₹) <b className="text-[#cf665a]">*</b></span><input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="price" type="number" min="0" step="0.01" defaultValue={product?.price ?? ""} placeholder="0.00" required /></label>
             <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]"><span>MRP (₹) <b className="text-[#cf665a]">*</b></span><input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="mrp" type="number" min="0" step="0.01" defaultValue={product?.mrp ?? ""} placeholder="0.00" required /></label>
             <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]"><span>Opening stock <b className="text-[#cf665a]">*</b></span><input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="stock" type="number" min="0" step="1" defaultValue={product?.stock ?? ""} placeholder="0" required /></label>
-            <div className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]"><span>Product photo</span><div className="flex h-9 items-center gap-2 rounded-md border border-dashed border-[#dbe4de] px-2.5 text-[8px] font-normal text-[#89978e]"><AdminIcon name="upload" size={16} />Image upload available later</div></div>
+            <div className="col-span-2 flex min-w-0 flex-col gap-2 text-[9px] font-semibold text-[#536057] max-[480px]:col-span-1">
+              <span>Product photo</span>
+              <div className="flex items-center gap-3">
+                {product?.image && product.image.startsWith("https://") && !removeImage && !selectedImage
+                  ? <Image className="size-12 rounded-lg border border-[#e4eae6] object-cover" src={product.image} alt={`${product.name} current product`} width={48} height={48} unoptimized />
+                  : <span className="grid size-12 place-items-center rounded-lg bg-[#f3f5f3] text-2xl">{selectedImage ? "🖼️" : removeImage ? "—" : product?.image || "🛒"}</span>}
+                <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-dashed border-[#dbe4de] px-2.5 text-[9px] font-medium text-[#526057] hover:bg-[#f8faf8]">
+                  <AdminIcon name="upload" size={16} />
+                  {selectedImage ? selectedImage.name : "Choose image"}
+                  <input
+                    className="sr-only"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(event) => {
+                      setSelectedImage(event.target.files?.[0] ?? null);
+                      setRemoveImage(false);
+                    }}
+                  />
+                </label>
+                {(product?.imagePublicId || selectedImage) && !removeImage && (
+                  <button
+                    className="text-[9px] font-semibold text-[#bd554b] underline"
+                    type="button"
+                    onClick={() => {
+                      setSelectedImage(null);
+                      setRemoveImage(true);
+                    }}
+                  >
+                    Remove image
+                  </button>
+                )}
+              </div>
+              <small className="text-[8px] font-normal text-[#89978e]">JPG, PNG, or WebP; max 5 MB. Stored securely in Cloudinary.</small>
+            </div>
           </div>
           <label className="mt-[17px] flex cursor-pointer items-center gap-2.5 rounded-lg border border-[#edf0ee] p-[11px]">
             <input className="peer sr-only" name="publish" type="checkbox" defaultChecked={product ? product.status === "Active" : true} />
@@ -136,7 +173,10 @@ export default function ProductsPage() {
     });
   }, [category, products, search, sort, status]);
 
-  async function saveProduct(event: FormEvent<HTMLFormElement>): Promise<string | null> {
+  async function saveProduct(
+    event: FormEvent<HTMLFormElement>,
+    imageSelection: { file: File | null; remove: boolean },
+  ): Promise<string | null> {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const stock = Number(data.get("stock"));
@@ -154,9 +194,35 @@ export default function ProductsPage() {
       stock,
       status: data.get("publish") !== "on" ? "Draft" : stock === 0 ? "Out of stock" : "Active",
       image: editingProduct?.image ?? "🛒",
+      imagePublicId: editingProduct?.imagePublicId ?? "",
       color: editingProduct?.color ?? "new",
     };
-    await persistProduct(product, editingProduct?.id);
+
+    let uploadedPublicId: string | null = null;
+    if (imageSelection.remove) {
+      product.image = "";
+      product.imagePublicId = "";
+    }
+    try {
+      if (imageSelection.file) {
+        const uploaded = await uploadProductImage(imageSelection.file);
+        product.image = uploaded.image;
+        product.imagePublicId = uploaded.imagePublicId;
+        uploadedPublicId = uploaded.imagePublicId;
+      }
+      await persistProduct(product, editingProduct?.id);
+    } catch (cause) {
+      if (uploadedPublicId) {
+        try {
+          await deleteProductImage(uploadedPublicId);
+        } catch (cleanupCause) {
+          const saveMessage = cause instanceof Error ? cause.message : "Unable to save product.";
+          const cleanupMessage = cleanupCause instanceof Error ? cleanupCause.message : "Unable to clean up uploaded image.";
+          throw new Error(`${saveMessage} The new Cloudinary image also needs cleanup: ${cleanupMessage}`);
+        }
+      }
+      throw cause;
+    }
     setModalOpen(false);
     setEditingProduct(null);
     return null;
@@ -218,7 +284,7 @@ export default function ProductsPage() {
                   {loading && <tr><td className="h-[120px] text-center text-[10px] text-[#89948d]" colSpan={8}>Loading shared catalog...</td></tr>}
                   {visibleProducts.map((product) => <tr className="border-b border-[#f0f2f0] last:border-0" key={product.id}>
                     <td className="pl-[17px]"><input className="accent-[#18834b]" type="checkbox" aria-label={`Select ${product.name}`} disabled /></td>
-                    <td className="px-2.5 py-[7px]"><div className="flex min-w-[185px] items-center gap-[9px]"><span className={`grid size-[38px] shrink-0 place-items-center rounded-lg text-xl ${product.color === "mango" ? "bg-[#fff4df]" : product.color === "milk" ? "bg-[#eaf4fc]" : product.color === "bread" ? "bg-[#fff0e5]" : product.color === "spinach" || product.color === "cucumber" ? "bg-[#eaf5eb]" : product.color === "rice" ? "bg-[#f3f0e6]" : product.color === "eggs" ? "bg-[#f8f1e5]" : product.color === "lime" ? "bg-[#f0f5df]" : "bg-[#eef2ef]"}`}>{product.image}</span><span className="flex flex-col gap-1"><strong className="text-[9px] font-bold text-[#354139]">{product.name}</strong><small className="text-[8px] text-[#99a29c]">{product.brand} · {product.packSize}</small></span></div></td>
+                    <td className="px-2.5 py-[7px]"><div className="flex min-w-[185px] items-center gap-[9px]"><span className={`grid size-[38px] shrink-0 place-items-center overflow-hidden rounded-lg text-xl ${product.color === "mango" ? "bg-[#fff4df]" : product.color === "milk" ? "bg-[#eaf4fc]" : product.color === "bread" ? "bg-[#fff0e5]" : product.color === "spinach" || product.color === "cucumber" ? "bg-[#eaf5eb]" : product.color === "rice" ? "bg-[#f3f0e6]" : product.color === "eggs" ? "bg-[#f8f1e5]" : product.color === "lime" ? "bg-[#f0f5df]" : "bg-[#eef2ef]"}`}>{product.image.startsWith("https://") ? <Image className="size-full object-cover" src={product.image} alt="" width={38} height={38} unoptimized /> : product.image}</span><span className="flex flex-col gap-1"><strong className="text-[9px] font-bold text-[#354139]">{product.name}</strong><small className="text-[8px] text-[#99a29c]">{product.brand} · {product.packSize}</small></span></div></td>
                     <td className="px-2.5"><span className="rounded bg-[#f3f5f3] px-1.5 py-1 text-[8px] text-[#69756d]">{product.category}</span></td>
                     <td className="px-2.5 font-mono text-[8px] text-[#89948d]">{product.sku}</td>
                     <td className="px-2.5"><span className="flex items-center gap-1.5"><strong className="text-[9px] text-[#344037]">{formatPrice(product.price)}</strong><del className="text-[8px] text-[#a4aca7]">{formatPrice(product.mrp)}</del></span></td>

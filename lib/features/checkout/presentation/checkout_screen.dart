@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:grocery_app/core/constants/app_colors.dart';
 import 'package:grocery_app/features/auth/presentation/auth_controller.dart';
@@ -15,7 +16,7 @@ import 'package:grocery_app/features/orders/data/mock_orders_repository.dart';
 import 'package:grocery_app/features/orders/domain/orders_repository.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
-const _razorpayKey = String.fromEnvironment('RAZORPAY_KEY', defaultValue: '');
+String get _razorpayKey => dotenv.env['rzp_test_TZvgFQIy5qGWLB'] ?? '';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});

@@ -33,6 +33,16 @@ This project includes `google_maps_flutter` for the location-confirmation flow. 
 - `flutter run`
 - `flutter analyze`
 
+## Razorpay test Key ID for Flutter
+
+The Flutter app reads the public Razorpay test Key ID from the project-root
+`.env` asset. Copy only `RAZORPAY_KEY_ID` from `server/.env` into that file as
+`RAZORPAY_KEY=rzp_test_...`. Keep `RAZORPAY_KEY_SECRET` only in `server/.env`;
+never put the secret in the Flutter app. Restart the app after changing `.env`.
+
+The current Flutter payment repository is a mock and is not ready to complete
+real payments. Do not ship the test key or treat this flow as production-ready.
+
 ## Shared catalog backend (PostgreSQL + Fastify)
 
 The admin Products page and Flutter home catalog now use the same PostgreSQL
@@ -98,3 +108,48 @@ belong in `backend/.env`, never in Flutter build arguments.
 
 The API creates Razorpay orders server-side and verifies signatures plus captured
 payment status. Flutter must send a Firebase ID token to use those endpoints.
+
+## Deploy the backend to Vercel
+
+Create a Vercel project with `server` as its Root Directory and deploy the
+repository. Vercel uses `server/api/index.ts` as the Fastify serverless entry
+point; `server/vercel.json` forwards API and health-check paths to it. Set the
+install command to `npm install`, build command to `npm run build`, and leave
+the output directory empty.
+
+Add these environment variables to the Vercel project (Production and any
+Preview environments that need the API):
+
+- `DATABASE_URL`: a hosted PostgreSQL connection string. Prefer the database
+  provider's pooled/serverless connection URL.
+- `ADMIN_USERNAME` and `ADMIN_PASSWORD`: the admin account configuration.
+- `CORS_ORIGINS`: comma-separated, exact browser origins for the deployed
+  admin site and Flutter web app, such as `https://admin.example.com`.
+- `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY`:
+  server-side Firebase Admin credentials. Store the private key as a Vercel
+  secret; newline escapes (`\n`) are supported. Do not configure the local
+  service-account file path on Vercel.
+- `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` only if using the backend payment
+  endpoints. Keep the secret server-side.
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`
+  for admin product image uploads. Keep the API secret server-side; the admin
+  browser receives only a short-lived upload signature and public API key.
+- `REDIS_URL` is optional; omit it to run without the product cache.
+
+After deployment, verify `/health` returns `{"status":"ok"}` and point the
+Flutter app's `API_BASE_URL` build define to `https://<your-vercel-domain>/api`.
+Run the database schema and admin seed commands against the hosted database
+before using the deployed admin login.
+
+### Cloudinary product images
+
+Create a Cloudinary account and add `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`,
+and `CLOUDINARY_API_SECRET` to the server environment (local `server/.env` and
+Vercel Environment Variables). Run `npm run db:push` from `server` to add the
+`image_public_id` column before deploying this version. Admins can then select
+JPG, PNG, or WebP product photos up to 5 MB in the product form. The browser
+uploads directly to Cloudinary using a server-generated signature; product
+URLs and public IDs are stored in PostgreSQL. Replacing, removing, or deleting
+a product also removes its old Cloudinary image. If Cloudinary cleanup fails
+after a catalog change, the API surfaces a warning so the orphan can be cleaned
+up from the Cloudinary dashboard.

@@ -10,5 +10,10 @@ if (!connectionString) {
   throw new Error("DATABASE_URL must be configured.");
 }
 
-export const pool = new Pool({ connectionString });
+export const pool = new Pool({
+  connectionString,
+  max: process.env.VERCEL ? 1 : 10,
+  idleTimeoutMillis: 5_000,
+  connectionTimeoutMillis: 10_000,
+});
 export const db = drizzle(pool, { schema });

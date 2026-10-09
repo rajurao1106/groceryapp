@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:grocery_app/core/constants/app_colors.dart';
 import 'package:grocery_app/features/cart/domain/cart_controller.dart';
+import 'package:grocery_app/features/home/presentation/catalog_product_image.dart';
 import 'package:grocery_app/features/home/domain/home_repository.dart';
 import 'package:grocery_app/features/orders/data/mock_orders_repository.dart';
 import 'package:grocery_app/features/orders/domain/orders_repository.dart';
@@ -122,17 +122,9 @@ class OrderDetailScreen extends ConsumerWidget {
                         child: SizedBox(
                           width: 72,
                           height: 72,
-                          child: CachedNetworkImage(
-                            imageUrl: item.imageUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) =>
-                                Container(color: AppColors.surfaceVariant),
-                            errorWidget: (context, url, error) => Container(
-                              color: AppColors.surfaceVariant,
-                              child: const Icon(
-                                Icons.image_not_supported_outlined,
-                              ),
-                            ),
+                          child: CatalogProductImage(
+                            image: item.imageUrl,
+                            emojiFontSize: 36,
                           ),
                         ),
                       ),

@@ -1,10 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:grocery_app/core/constants/app_colors.dart';
 import 'package:grocery_app/features/cart/domain/cart_controller.dart';
 import 'package:grocery_app/features/home/domain/home_repository.dart';
+import 'package:grocery_app/features/home/presentation/catalog_product_image.dart';
 
 class ProductCard extends ConsumerWidget {
   const ProductCard({
@@ -65,15 +65,9 @@ class ProductCard extends ConsumerWidget {
                   child: SizedBox(
                     height: 112,
                     width: double.infinity,
-                    child: CachedNetworkImage(
-                      imageUrl: product.imageUrl,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) =>
-                          Container(color: AppColors.surfaceVariant),
-                      errorWidget: (context, url, error) => Container(
-                        color: AppColors.surfaceVariant,
-                        child: const Icon(Icons.image_not_supported_outlined),
-                      ),
+                    child: CatalogProductImage(
+                      image: product.imageUrl,
+                      emojiFontSize: 48,
                     ),
                   ),
                 ),

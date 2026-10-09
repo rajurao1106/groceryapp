@@ -24,6 +24,7 @@ export const products = pgTable(
     stock: integer("stock").notNull().default(0),
     isPublished: boolean("is_published").notNull().default(true),
     image: text("image").notNull().default(""),
+    imagePublicId: text("image_public_id").notNull().default(""),
     color: text("color").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

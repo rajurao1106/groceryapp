@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +6,7 @@ import 'package:grocery_app/core/constants/app_colors.dart';
 import 'package:grocery_app/features/cart/domain/bill_repository.dart';
 import 'package:grocery_app/features/cart/domain/cart_controller.dart';
 import 'package:grocery_app/features/cart/presentation/bill_details_card.dart';
+import 'package:grocery_app/features/home/presentation/catalog_product_image.dart';
 
 class CartPlaceholderScreen extends ConsumerWidget {
   const CartPlaceholderScreen({super.key});
@@ -103,17 +103,9 @@ class CartPlaceholderScreen extends ConsumerWidget {
                           child: SizedBox(
                             width: 80,
                             height: 80,
-                            child: CachedNetworkImage(
-                              imageUrl: product.imageUrl,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) =>
-                                  Container(color: AppColors.surfaceVariant),
-                              errorWidget: (context, url, error) => Container(
-                                color: AppColors.surfaceVariant,
-                                child: const Icon(
-                                  Icons.image_not_supported_outlined,
-                                ),
-                              ),
+                            child: CatalogProductImage(
+                              image: product.imageUrl,
+                              emojiFontSize: 36,
                             ),
                           ),
                         ),

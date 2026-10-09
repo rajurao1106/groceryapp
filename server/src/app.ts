@@ -16,6 +16,12 @@ export async function buildApp() {
 
   await app.register(helmet);
   await app.register(cors, { origin: origins, credentials: true });
+  app.addHook("onRequest", async (request, reply) => {
+    const origin = request.headers.origin;
+    if (origin && !origins.includes(origin)) {
+      return reply.code(403).send({ error: "This request origin is not allowed." });
+    }
+  });
   await initializeFirebase();
   app.get("/health", async () => ({ status: "ok" }));
   await app.register(adminAuthRoutes, { prefix: "/api" });

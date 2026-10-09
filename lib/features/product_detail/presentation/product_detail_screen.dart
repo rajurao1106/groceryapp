@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +6,7 @@ import 'package:grocery_app/core/constants/app_colors.dart';
 import 'package:grocery_app/features/cart/domain/cart_controller.dart';
 import 'package:grocery_app/features/cart/domain/cart_count_provider.dart';
 import 'package:grocery_app/features/home/domain/home_repository.dart';
+import 'package:grocery_app/features/home/presentation/catalog_product_image.dart';
 import 'package:grocery_app/features/home/presentation/product_card.dart';
 import 'package:grocery_app/features/product_detail/data/mock_product_detail_repository.dart';
 import 'package:grocery_app/features/product_detail/domain/product_detail_repository.dart';
@@ -60,7 +60,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
           ),
           IconButton(
             tooltip: 'View cart',
-            onPressed: () => context.push('/cart'),
+            onPressed: () => context.go('/cart'),
             icon: _CartActionIcon(count: cartCount),
           ),
         ],
@@ -349,7 +349,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                   ),
                   const SizedBox(width: 10),
                   OutlinedButton.icon(
-                    onPressed: () => context.push('/cart'),
+                    onPressed: () => context.go('/cart'),
                     icon: const Icon(Icons.shopping_bag_outlined, size: 18),
                     label: const Text('View cart'),
                     style: OutlinedButton.styleFrom(
@@ -430,14 +430,9 @@ class _ProductGallery extends StatelessWidget {
             onPageChanged: onPageChanged,
             itemBuilder: (context, index) => ColoredBox(
               color: AppColors.surfaceVariant,
-              child: CachedNetworkImage(
-                imageUrl: images[index],
-                fit: BoxFit.cover,
-                placeholder: (context, url) =>
-                    const ColoredBox(color: AppColors.surfaceVariant),
-                errorWidget: (context, url, error) => const Center(
-                  child: Icon(Icons.image_not_supported_outlined, size: 42),
-                ),
+              child: CatalogProductImage(
+                image: images[index],
+                emojiFontSize: 120,
               ),
             ),
           ),

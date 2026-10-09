@@ -17,6 +17,7 @@ export type Product = {
   stock: number;
   status: ProductStatus;
   image: string;
+  imagePublicId: string;
   color: string;
 };
 
@@ -80,20 +81,20 @@ export function ProductCatalogProvider({ children }: { children: ReactNode }) {
   }, [fetchProducts]);
 
   const saveProduct = useCallback(async (product: ProductInput, id?: number) => {
-    const result = await backendRequest<{ product: Product }>(
+    const result = await backendRequest<{ product: Product; warning?: string }>(
       id === undefined ? "/products" : `/products/${id}`,
       { method: id === undefined ? "POST" : "PUT", body: JSON.stringify(product) },
     );
     setProducts((current) => id === undefined
       ? [result.product, ...current]
       : current.map((item) => item.id === id ? result.product : item));
-    setError("");
+    setError(result.warning ?? "");
   }, []);
 
   const deleteProduct = useCallback(async (id: number) => {
-    await backendRequest<void>(`/products/${id}`, { method: "DELETE" });
+    const result = await backendRequest<{ warning?: string }>(`/products/${id}`, { method: "DELETE" });
     setProducts((current) => current.filter((product) => product.id !== id));
-    setError("");
+    setError(result.warning ?? "");
   }, []);
 
   const adjustStock = useCallback(async (id: number, stock: number) => {
@@ -110,6 +111,7 @@ export function ProductCatalogProvider({ children }: { children: ReactNode }) {
       stock,
       status: product.status === "Draft" ? "Draft" : stock === 0 ? "Out of stock" : "Active",
       image: product.image,
+      imagePublicId: product.imagePublicId,
       color: product.color,
     };
     await saveProduct(input, id);

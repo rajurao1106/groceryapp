@@ -19,8 +19,10 @@ const credentialsSchema = z.object({
 });
 
 function sessionCookie(value: string, maxAge: number): string {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  return `${ADMIN_SESSION_COOKIE}=${value}; HttpOnly; SameSite=Lax; Path=/api; Max-Age=${maxAge}${secure}`;
+  const isProduction = process.env.NODE_ENV === "production";
+  const sameSite = isProduction ? "None" : "Lax";
+  const secure = isProduction ? "; Secure" : "";
+  return `${ADMIN_SESSION_COOKIE}=${value}; HttpOnly; SameSite=${sameSite}; Path=/api; Max-Age=${maxAge}${secure}`;
 }
 
 export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
