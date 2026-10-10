@@ -3,6 +3,12 @@ name: Build Android APK
 on:
   push:
   workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: Public HTTPS API base URL ending in /api
+        required: false
+        default: https://groceryapp-mvwz.vercel.app/api
+        type: string
 
 permissions:
   contents: read
@@ -10,6 +16,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      API_BASE_URL: ${{ inputs.api_base_url || vars.API_BASE_URL || 'https://groceryapp-mvwz.vercel.app/api' }}
 
     steps:
       - name: Check out repository
@@ -30,8 +38,18 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      - name: Validate API URL
+        run: |
+          case "$API_BASE_URL" in
+            https://*/api|https://*/api/) ;;
+            *)
+              echo "::error::Set API_BASE_URL to your public HTTPS API URL ending in /api."
+              exit 1
+              ;;
+          esac
+
       - name: Build release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define="API_BASE_URL=${API_BASE_URL%/}"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

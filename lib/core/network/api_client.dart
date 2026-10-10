@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 
 const _apiBaseUrl = String.fromEnvironment(
-  'http://127.0.0.1:4000/api',
-  defaultValue: 'http://127.0.0.1:4000/api',
+  'API_BASE_URL',
+  defaultValue: 'https://groceryapp-mvwz.vercel.app/api',
 );
 
 class ApiClient {
