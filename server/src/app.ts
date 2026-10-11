@@ -46,6 +46,7 @@ export async function buildApp() {
       callback(new Error("This request origin is not allowed."), false);
     },
     credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   });
   app.addHook("onRequest", async (request, reply) => {
     const origin = request.headers.origin;
