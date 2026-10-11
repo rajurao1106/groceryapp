@@ -57,10 +57,8 @@ real payments. Do not ship the test key or treat this flow as production-ready.
 The admin Products page and Flutter home catalog now use the same PostgreSQL
 catalog through the Fastify API. Product data is no longer read from or written
 to admin-browser local storage. Admin changes are visible to the app after its
-home catalog is refreshed; pull down on the home screen to refresh it.
-Catalog and stock management are migrated in this pass. Demo orders, staff,
-delivery partners, inventory movement history, and settings still use the
-existing local-storage demo providers.
+home catalog is refreshed; pull down on the home screen to refresh it. Catalog
+and stock management use the shared backend.
 
 1. Install Node.js 20 or newer and PostgreSQL. In PostgreSQL, create the
    `grocery` database and a login role for the backend. For example, connect
@@ -82,6 +80,14 @@ existing local-storage demo providers.
    `auth:seed-admin` updates the admin credentials from `.env`.
    Redis is optional and only used for product caching. To enable it, install
    and start Redis separately and set `REDIS_URL` in `server/.env`.
+   The admin Orders, Customers, Delivery partners, Settings, and Staff directory
+   tables are part of the Drizzle schema. Apply the schema to a backed-up
+   development/staging database and review the generated changes before
+   updating a production Neon database. The new tables are not populated from
+   browser demo data; existing demo records are not automatically migrated.
+   For an existing catalog database, run `npm run db:push` from `server`
+   against a backed-up development/staging database to add the new tables;
+   verify that diff before applying the schema to production.
 3. Configure Firebase Authentication and a Firebase Admin service account for
    customer payment endpoints. Set `FIREBASE_SERVICE_ACCOUNT_PATH` in
    `server/.env`. Do not expose service-account or Razorpay secrets to the
@@ -106,6 +112,14 @@ catalog when returning to the foreground, every 30 seconds while active, and
 when the user pulls to refresh. Admin category filters include categories
 already used by products, and new category names can be entered in the product
 form.
+
+Admin Orders, Customers, Delivery partners, Settings, and Staff directory
+records are stored in PostgreSQL and accessed through session-protected
+`/api/orders`, `/api/customers`, `/api/delivery-partners`, `/api/settings`, and
+`/api/staff` endpoints. Order, customer, partner, and staff lists refresh on
+tab focus and every 30 seconds; settings are loaded when the page opens.
+Staff records are directory data only: invitation email, staff sign-in,
+role-based route authorization, and suspension enforcement are not implemented.
 
 The customer catalog route `GET /api/home` is public and returns published,
 in-stock products. Admin catalog reads and product create/update/delete routes

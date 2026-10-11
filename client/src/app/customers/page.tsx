@@ -1,18 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { AdminIcon, AdminSidebar, AdminTopbar } from "@/components/admin-chrome";
-import { useOrdersDemo, type DemoOrder } from "@/components/orders-demo-provider";
+import type { DemoOrder } from "@/components/orders-demo-provider";
+import { backendRequest } from "@/lib/backend-api";
 
 type CustomerFilter = "All customers" | "Repeat customers" | "First order";
 type Customer = {
+  id: number;
   name: string;
   initials: string;
   phone: string;
   address: string;
   orderCount: number;
   totalPaid: number;
-  latestOrder: DemoOrder;
+  latestOrder: DemoOrder | null;
+  orders: DemoOrder[];
 };
 
 const filters: CustomerFilter[] = ["All customers", "Repeat customers", "First order"];
@@ -26,7 +29,7 @@ function CustomerDetails({ customer, orders, onClose }: {
   orders: DemoOrder[];
   onClose: () => void;
 }) {
-  const customerOrders = orders.filter((order) => order.phone === customer.phone).sort((a, b) => a.minutesAgo - b.minutesAgo);
+  const customerOrders = orders;
   return (
     <div className="fixed inset-0 z-30 grid place-items-center overflow-y-auto bg-[#142019]/45 p-5 max-[640px]:items-end max-[640px]:p-2" role="presentation" onMouseDown={(event) => {
       if (event.target === event.currentTarget) onClose();
@@ -43,7 +46,7 @@ function CustomerDetails({ customer, orders, onClose }: {
           <section className="grid grid-cols-3 gap-2 max-[420px]:grid-cols-1">
             <div className="rounded-lg border border-[#edf0ee] p-3"><small className="text-[8px] text-[#89948d]">Orders</small><strong className="mt-1 block text-[15px] text-[#28372e]">{customer.orderCount}</strong></div>
             <div className="rounded-lg border border-[#edf0ee] p-3"><small className="text-[8px] text-[#89948d]">Paid total</small><strong className="mt-1 block text-[15px] text-[#28372e]">{formatAmount(customer.totalPaid)}</strong></div>
-            <div className="rounded-lg border border-[#edf0ee] p-3"><small className="text-[8px] text-[#89948d]">Latest order</small><strong className="mt-1 block text-[12px] text-[#28372e]">{customer.latestOrder.id}</strong></div>
+            <div className="rounded-lg border border-[#edf0ee] p-3"><small className="text-[8px] text-[#89948d]">Latest order</small><strong className="mt-1 block text-[12px] text-[#28372e]">{customer.latestOrder?.id ?? "None yet"}</strong></div>
           </section>
           <section className="rounded-lg border border-[#edf0ee] p-3.5">
             <h3 className="mb-2 mt-0 text-[10px] font-bold text-[#39453e]">Delivery address</h3>
@@ -68,36 +71,72 @@ function CustomerDetails({ customer, orders, onClose }: {
 }
 
 export default function CustomersPage() {
-  const { orders } = useOrdersDemo();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [activeFilter, setActiveFilter] = useState<CustomerFilter>("All customers");
   const [search, setSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [notice, setNotice] = useState("");
 
-  const customers = useMemo(() => {
-    const byPhone = new Map<string, Customer>();
-    for (const order of orders) {
-      const customer = byPhone.get(order.phone);
-      if (customer) {
-        customer.orderCount += 1;
-        if (order.paymentStatus === "Paid") customer.totalPaid += order.amount;
-        if (order.minutesAgo < customer.latestOrder.minutesAgo) {
-          customer.latestOrder = order;
-          customer.address = order.address;
-        }
-      } else {
-        byPhone.set(order.phone, {
-          name: order.customer,
-          initials: order.initials,
-          phone: order.phone,
-          address: order.address,
-          orderCount: 1,
-          totalPaid: order.paymentStatus === "Paid" ? order.amount : 0,
-          latestOrder: order,
-        });
-      }
+  const loadCustomers = useCallback(async () => {
+    try {
+      const response = await backendRequest<{ customers: Customer[] }>("/customers");
+      setCustomers(response.customers);
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load customers.");
+    } finally {
+      setLoading(false);
     }
-    return [...byPhone.values()].sort((a, b) => a.latestOrder.minutesAgo - b.latestOrder.minutesAgo);
-  }, [orders]);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadCustomers(); }, 0);
+    const interval = window.setInterval(() => { void loadCustomers(); }, 30_000);
+    window.addEventListener("focus", loadCustomers);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", loadCustomers);
+    };
+  }, [loadCustomers]);
+
+  async function saveCustomer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const input = {
+      name: String(data.get("name")).trim(),
+      phone: String(data.get("phone")).trim(),
+      address: String(data.get("address")).trim(),
+    };
+    try {
+      const response = editingCustomer
+        ? await backendRequest<{ customer: Customer }>(`/customers/${editingCustomer.id}`, { method: "PUT", body: JSON.stringify(input) })
+        : await backendRequest<{ customer: Customer }>("/customers", { method: "POST", body: JSON.stringify(input) });
+      setCustomers((current) => editingCustomer
+        ? current.map((customer) => customer.id === response.customer.id ? response.customer : customer)
+        : [response.customer, ...current]);
+      setFormOpen(false);
+      setEditingCustomer(null);
+      setNotice(editingCustomer ? "Customer updated." : "Customer added.");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save customer.");
+    }
+  }
+
+  async function deleteCustomer(customer: Customer) {
+    if (!window.confirm(`Delete ${customer.name}? Their order history will be retained.`)) return;
+    try {
+      await backendRequest<void>(`/customers/${customer.id}`, { method: "DELETE" });
+      setCustomers((current) => current.filter((item) => item.id !== customer.id));
+      setNotice("Customer deleted. Existing orders were retained.");
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete customer.");
+    }
+  }
 
   const visibleCustomers = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -110,7 +149,7 @@ export default function CustomersPage() {
 
   const repeatCount = customers.filter((customer) => customer.orderCount > 1).length;
   const totalPaid = customers.reduce((sum, customer) => sum + customer.totalPaid, 0);
-  const totalOrders = orders.length;
+  const totalOrders = customers.reduce((sum, customer) => sum + customer.orderCount, 0);
 
   function countFor(filter: CustomerFilter) {
     if (filter === "All customers") return customers.length;
@@ -128,11 +167,16 @@ export default function CustomersPage() {
             <h1 className="mb-1.5 mt-2 text-[27px] font-bold tracking-[-0.9px] max-[640px]:text-[23px]">Customers</h1>
             <p className="m-0 text-[11px] text-[#818b85]">View customer profiles, purchase history and repeat-order activity.</p>
           </div>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="m-0 text-[9px] text-[#818b85]">Customer profiles and order history are stored in the backend.</p>
+            <button className="h-9 rounded-lg bg-[#18834b] px-3 text-[9px] font-bold text-white" type="button" onClick={() => { setEditingCustomer(null); setFormOpen(true); }}>Add customer</button>
+          </div>
+          {error && <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[9px] text-red-700" role="alert"><span>{error}</span><button className="font-bold underline" type="button" onClick={() => void loadCustomers()}>Retry</button></div>}
 
           <section className="mb-[17px] grid grid-cols-4 gap-[13px] max-[980px]:grid-cols-2 max-[640px]:gap-2" aria-label="Customer summary">
             <article className="grid min-h-[91px] grid-cols-[37px_1fr] grid-rows-2 content-center gap-x-[11px] rounded-[10px] border border-[#edf0ee] bg-white p-3.5 max-[640px]:min-h-[80px] max-[640px]:gap-x-2 max-[640px]:p-2.5"><span className="row-span-2 grid size-9 place-items-center self-center rounded-[9px] bg-[#eaf2fb] text-[#4b81bc]"><AdminIcon name="customers" /></span><div className="flex items-baseline justify-between gap-2"><span className="text-[9px] text-[#78837c] max-[640px]:text-[8px]">Total customers</span><strong className="text-xl font-bold max-[640px]:text-[17px]">{customers.length}</strong></div><small className="self-end text-[8px] text-[#9aa39d]">From demo orders</small></article>
             <article className="grid min-h-[91px] grid-cols-[37px_1fr] grid-rows-2 content-center gap-x-[11px] rounded-[10px] border border-[#edf0ee] bg-white p-3.5 max-[640px]:min-h-[80px] max-[640px]:gap-x-2 max-[640px]:p-2.5"><span className="row-span-2 grid size-9 place-items-center self-center rounded-[9px] bg-[#e9f5ed] text-[#22834c]"><AdminIcon name="check" /></span><div className="flex items-baseline justify-between gap-2"><span className="text-[9px] text-[#78837c] max-[640px]:text-[8px]">Repeat customers</span><strong className="text-xl font-bold max-[640px]:text-[17px]">{repeatCount}</strong></div><small className="self-end text-[8px] text-[#9aa39d]">More than one order</small></article>
-            <article className="grid min-h-[91px] grid-cols-[37px_1fr] grid-rows-2 content-center gap-x-[11px] rounded-[10px] border border-[#edf0ee] bg-white p-3.5 max-[640px]:min-h-[80px] max-[640px]:gap-x-2 max-[640px]:p-2.5"><span className="row-span-2 grid size-9 place-items-center self-center rounded-[9px] bg-[#fff2e6] text-[#d4873b]"><AdminIcon name="receipt" /></span><div className="flex items-baseline justify-between gap-2"><span className="text-[9px] text-[#78837c] max-[640px]:text-[8px]">Demo orders</span><strong className="text-xl font-bold max-[640px]:text-[17px]">{totalOrders}</strong></div><small className="self-end text-[8px] text-[#9aa39d]">Across all demo customers</small></article>
+            <article className="grid min-h-[91px] grid-cols-[37px_1fr] grid-rows-2 content-center gap-x-[11px] rounded-[10px] border border-[#edf0ee] bg-white p-3.5 max-[640px]:min-h-[80px] max-[640px]:gap-x-2 max-[640px]:p-2.5"><span className="row-span-2 grid size-9 place-items-center self-center rounded-[9px] bg-[#fff2e6] text-[#d4873b]"><AdminIcon name="receipt" /></span><div className="flex items-baseline justify-between gap-2"><span className="text-[9px] text-[#78837c] max-[640px]:text-[8px]">Customer orders</span><strong className="text-xl font-bold max-[640px]:text-[17px]">{totalOrders}</strong></div><small className="self-end text-[8px] text-[#9aa39d]">Across all customers</small></article>
             <article className="grid min-h-[91px] grid-cols-[37px_1fr] grid-rows-2 content-center gap-x-[11px] rounded-[10px] border border-[#edf0ee] bg-white p-3.5 max-[640px]:min-h-[80px] max-[640px]:gap-x-2 max-[640px]:p-2.5"><span className="row-span-2 grid size-9 place-items-center self-center rounded-[9px] bg-[#f0edfb] text-[#7761bc]"><AdminIcon name="rupee" /></span><div className="flex items-baseline justify-between gap-2"><span className="text-[9px] text-[#78837c] max-[640px]:text-[8px]">Paid order value</span><strong className="text-[15px] font-bold max-[640px]:text-[12px]">{formatAmount(totalPaid)}</strong></div><small className="self-end text-[8px] text-[#9aa39d]">Excludes pending and refunded</small></article>
           </section>
 
@@ -152,20 +196,31 @@ export default function CustomersPage() {
                     <td className="px-2.5 py-[9px] pl-[17px]"><div className="flex min-w-[210px] items-center gap-[9px]"><span className="grid size-[36px] shrink-0 place-items-center rounded-full bg-[#eaf2fb] text-[9px] font-bold text-[#4b81bc]">{customer.initials}</span><span className="flex flex-col gap-1"><strong className="text-[9px] font-bold text-[#354139]">{customer.name}</strong><small className="text-[8px] text-[#99a29c]">{customer.phone}</small></span></div></td>
                     <td className="px-2.5 text-[9px] font-semibold text-[#4d5c52]">{customer.orderCount}</td>
                     <td className="px-2.5 text-[9px] font-bold text-[#354139]">{formatAmount(customer.totalPaid)}</td>
-                    <td className="px-2.5"><span className="flex flex-col gap-1"><strong className="font-mono text-[8px] text-[#5d6a61]">{customer.latestOrder.id}</strong><small className="text-[8px] text-[#99a29c]">Today, {customer.latestOrder.time}</small></span></td>
-                    <td className="px-2.5"><span className={`inline-flex whitespace-nowrap rounded-full px-[7px] py-[5px] text-[8px] font-semibold ${customer.latestOrder.status === "Delivered" ? "bg-[#eaf6ed] text-[#32814c]" : customer.latestOrder.status === "Cancelled" ? "bg-[#fff0ee] text-[#ce6659]" : "bg-[#eaf2fb] text-[#4b81bc]"}`}>{customer.latestOrder.status}</span></td>
+                    <td className="px-2.5"><span className="flex flex-col gap-1"><strong className="font-mono text-[8px] text-[#5d6a61]">{customer.latestOrder?.id ?? "—"}</strong><small className="text-[8px] text-[#99a29c]">{customer.latestOrder ? `Today, ${customer.latestOrder.time}` : "No orders yet"}</small></span></td>
+                    <td className="px-2.5">{customer.latestOrder ? <span className={`inline-flex whitespace-nowrap rounded-full px-[7px] py-[5px] text-[8px] font-semibold ${customer.latestOrder.status === "Delivered" ? "bg-[#eaf6ed] text-[#32814c]" : customer.latestOrder.status === "Cancelled" ? "bg-[#fff0ee] text-[#ce6659]" : "bg-[#eaf2fb] text-[#4b81bc]"}`}>{customer.latestOrder.status}</span> : <span className="text-[8px] text-[#99a29c]">—</span>}</td>
                     <td className="px-2.5"><span className={`inline-flex rounded-full px-[7px] py-[5px] text-[8px] font-semibold ${customer.orderCount > 1 ? "bg-[#f1effa] text-[#7664ae]" : "bg-[#f3f4f3] text-[#7b8680]"}`}>{customer.orderCount > 1 ? "Repeat" : "First order"}</span></td>
-                    <td className="px-2.5 pr-[17px]"><button className="inline-flex h-[29px] items-center gap-1 rounded-md border border-[#e5ebe7] bg-white px-2 text-[8px] font-bold text-[#59655e] hover:border-[#b9d5c2] hover:text-[#217847]" type="button" onClick={() => setSelectedCustomer(customer)}>View <AdminIcon name="chevron" size={13} /></button></td>
+                    <td className="px-2.5 pr-[17px]"><div className="flex gap-1"><button className="inline-flex h-[29px] items-center gap-1 rounded-md border border-[#e5ebe7] bg-white px-2 text-[8px] font-bold text-[#59655e] hover:border-[#b9d5c2] hover:text-[#217847]" type="button" onClick={() => setSelectedCustomer(customer)}>View</button><button className="h-[29px] rounded-md border border-[#e5ebe7] px-2 text-[8px] font-bold text-[#217847]" type="button" onClick={() => { setEditingCustomer(customer); setFormOpen(true); }}>Edit</button><button className="h-[29px] rounded-md border border-[#f0d8d4] px-2 text-[8px] font-bold text-[#bf5c50]" type="button" onClick={() => void deleteCustomer(customer)}>Delete</button></div></td>
                   </tr>)}
+                  {loading && <tr><td className="h-[70px] text-center text-[9px] text-[#89948d]" colSpan={7}>Loading customers…</td></tr>}
                   {visibleCustomers.length === 0 && <tr><td className="h-[210px] text-center" colSpan={7}><AdminIcon name="search" size={22} /><strong className="my-2 block text-[11px] text-[#39453e]">No customers found</strong><small className="text-[9px] text-[#89948d]">Try another search or choose a different customer filter.</small><button className="mt-2 block w-full border-0 bg-transparent text-[9px] font-bold text-[#217847]" type="button" onClick={() => { setSearch(""); setActiveFilter("All customers"); }}>Clear filters</button></td></tr>}
                 </tbody>
               </table>
             </div>
           </section>
-          <p className="ml-px mt-3 text-[9px] text-[#9ca69f]">Demo customers are derived from the Orders page and share its browser-local order data.</p>
+          <p className="ml-px mt-3 text-[9px] text-[#9ca69f]">Deleting a customer never deletes historical orders.</p>
         </div>
       </main>
-      {selectedCustomer && <CustomerDetails customer={selectedCustomer} orders={orders} onClose={() => setSelectedCustomer(null)} />}
+      {selectedCustomer && <CustomerDetails customer={selectedCustomer} orders={selectedCustomer.orders} onClose={() => setSelectedCustomer(null)} />}
+      {formOpen && <div className="fixed inset-0 z-40 grid place-items-center bg-[#142019]/45 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setFormOpen(false); }}>
+        <form className="w-full max-w-[440px] space-y-3 rounded-xl bg-white p-5 shadow-xl" onSubmit={saveCustomer}>
+          <h2 className="m-0 text-[16px] font-bold text-[#1b2820]">{editingCustomer ? "Edit customer" : "Add customer"}</h2>
+          <label className="block text-[9px] font-semibold text-[#536057]">Name<input className="mt-1 block h-9 w-full rounded-md border border-[#e4eae6] px-2.5 text-[10px]" name="name" defaultValue={editingCustomer?.name ?? ""} required maxLength={160} /></label>
+          <label className="block text-[9px] font-semibold text-[#536057]">Phone<input className="mt-1 block h-9 w-full rounded-md border border-[#e4eae6] px-2.5 text-[10px]" name="phone" defaultValue={editingCustomer?.phone ?? ""} required maxLength={40} /></label>
+          <label className="block text-[9px] font-semibold text-[#536057]">Address<input className="mt-1 block h-9 w-full rounded-md border border-[#e4eae6] px-2.5 text-[10px]" name="address" defaultValue={editingCustomer?.address ?? ""} required maxLength={500} /></label>
+          <div className="flex justify-end gap-2"><button className="h-9 rounded-md border px-3 text-[9px]" type="button" onClick={() => setFormOpen(false)}>Cancel</button><button className="h-9 rounded-md bg-[#18834b] px-3 text-[9px] font-bold text-white" type="submit">Save customer</button></div>
+        </form>
+      </div>}
+      {notice && <div className="fixed bottom-5 right-5 z-50 rounded-lg bg-[#1d3325] px-4 py-3 text-[10px] font-semibold text-white shadow-lg" role="status">{notice}</div>}
     </div>
   );
 }

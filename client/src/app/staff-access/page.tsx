@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { AdminIcon, AdminSidebar, AdminTopbar } from "@/components/admin-chrome";
-import { useLocalStorageState } from "@/hooks/use-local-storage-state";
+import { backendRequest } from "@/lib/backend-api";
 
 type StaffRole = "Owner" | "Store manager" | "Catalog manager" | "Order manager";
 type StaffStatus = "Active" | "Invitation pending" | "Suspended";
@@ -18,14 +18,6 @@ type StaffMember = {
 
 const staffRoles: StaffRole[] = ["Owner", "Store manager", "Catalog manager", "Order manager"];
 const filters = ["All staff", "Active", "Invitation pending", "Suspended"] as const;
-const initialStaff: StaffMember[] = [
-  { id: 1, name: "Rohan Kumar", email: "rohan@greenmart.example", initials: "RK", role: "Owner", status: "Active", lastActive: "Now" },
-  { id: 2, name: "Priya Menon", email: "priya@greenmart.example", initials: "PM", role: "Store manager", status: "Active", lastActive: "12 min ago" },
-  { id: 3, name: "Dev Shah", email: "dev@greenmart.example", initials: "DS", role: "Catalog manager", status: "Active", lastActive: "1 hour ago" },
-  { id: 4, name: "Sana Khan", email: "sana@greenmart.example", initials: "SK", role: "Order manager", status: "Invitation pending", lastActive: "Invite sent today" },
-  { id: 5, name: "Amit Rao", email: "amit@greenmart.example", initials: "AR", role: "Order manager", status: "Suspended", lastActive: "3 days ago" },
-];
-
 const rolePermissions: { role: StaffRole; description: string; permissions: string[]; tone: string }[] = [
   { role: "Owner", description: "Full access to all store operations and team access.", permissions: ["All pages", "Manage staff", "Store settings"], tone: "bg-[#f0edfb] text-[#7761bc]" },
   { role: "Store manager", description: "Manage day-to-day store operations and fulfilment.", permissions: ["Orders", "Inventory", "Delivery partners"], tone: "bg-[#eaf2fb] text-[#4b81bc]" },
@@ -43,9 +35,10 @@ function roleTone(role: StaffRole) {
   return rolePermissions.find((entry) => entry.role === role)?.tone ?? "bg-[#f1f3f1] text-[#7b8680]";
 }
 
-function InviteModal({ onClose, onInvite }: {
+function InviteModal({ member, onClose, onInvite }: {
+  member: StaffMember | null;
   onClose: () => void;
-  onInvite: (event: FormEvent<HTMLFormElement>) => void;
+  onInvite: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }) {
   return (
     <div className="fixed inset-0 z-30 grid place-items-center overflow-y-auto bg-[#142019]/45 p-5 max-[640px]:items-end max-[640px]:p-2" role="presentation" onMouseDown={(event) => {
@@ -53,19 +46,19 @@ function InviteModal({ onClose, onInvite }: {
     }}>
       <section className="max-h-[calc(100vh-40px)] w-full max-w-[520px] overflow-y-auto rounded-[13px] border border-[#e9edea] bg-white shadow-[0_20px_70px_rgba(12,27,17,0.2)] max-[640px]:max-h-[calc(100vh-16px)]" role="dialog" aria-modal="true" aria-labelledby="invite-staff-title">
         <div className="flex items-start justify-between gap-3 border-b border-[#edf0ee] px-[22px] py-5 max-[640px]:px-[15px]">
-          <div><p className="m-0 text-[8px] font-bold tracking-[1px] text-[#89948d]">TEAM ACCESS</p><h2 className="mb-1.5 mt-1.5 text-[19px] font-bold text-[#1b2820]" id="invite-staff-title">Invite a team member</h2><p className="m-0 text-[10px] text-[#89948d]">Create a local demo invitation with the selected role.</p></div>
+          <div><p className="m-0 text-[8px] font-bold tracking-[1px] text-[#89948d]">TEAM DIRECTORY</p><h2 className="mb-1.5 mt-1.5 text-[19px] font-bold text-[#1b2820]" id="invite-staff-title">{member ? "Edit staff member" : "Add staff member"}</h2><p className="m-0 text-[10px] text-[#89948d]">{member ? "Update the saved staff directory record." : "Add a staff directory record."}</p></div>
           <button className="grid size-[31px] shrink-0 place-items-center rounded-md border border-[#edf0ee] bg-white text-[#79847d] hover:bg-[#f8faf8]" type="button" onClick={onClose} aria-label="Close dialog"><AdminIcon name="close" /></button>
         </div>
         <form className="px-[22px] pb-5 pt-[18px] max-[640px]:px-[15px]" onSubmit={onInvite}>
           <div className="grid grid-cols-2 gap-[13px] max-[480px]:grid-cols-1">
-            <label className="col-span-2 flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057] max-[480px]:col-span-1">Full name *<input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="name" placeholder="e.g. Asha Patel" required autoFocus maxLength={80} /></label>
-            <label className="col-span-2 flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057] max-[480px]:col-span-1">Work email *<input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="email" type="email" placeholder="name@example.com" required maxLength={254} /></label>
-            <label className="col-span-2 flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057] max-[480px]:col-span-1">Role<select className="h-9 rounded-md border border-[#e4eae6] bg-white px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="role" defaultValue="Order manager">{staffRoles.filter((role) => role !== "Owner").map((role) => <option key={role}>{role}</option>)}</select></label>
+            <label className="col-span-2 flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057] max-[480px]:col-span-1">Full name *<input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="name" placeholder="e.g. Asha Patel" defaultValue={member?.name ?? ""} required autoFocus maxLength={120} /></label>
+            <label className="col-span-2 flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057] max-[480px]:col-span-1">Work email *<input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="email" type="email" placeholder="name@example.com" defaultValue={member?.email ?? ""} required maxLength={254} /></label>
+            <label className="col-span-2 flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057] max-[480px]:col-span-1">Role<select className="h-9 rounded-md border border-[#e4eae6] bg-white px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="role" defaultValue={member?.role ?? "Order manager"}>{staffRoles.filter((role) => role !== "Owner").map((role) => <option key={role}>{role}</option>)}</select></label>
           </div>
           <p className="mt-3 rounded-md bg-[#f7f9f7] p-2.5 text-[8px] leading-[1.6] text-[#89948d]">No email will be sent and access is not enforced. Connect authentication and server-side role checks before using this for real staff.</p>
           <div className="mt-[17px] flex justify-end gap-2 border-t border-[#edf0ee] pt-[15px]">
             <button className="h-[38px] rounded-lg border border-[#e2e8e4] bg-white px-[13px] text-[10px] font-bold text-[#59655e]" type="button" onClick={onClose}>Cancel</button>
-            <button className="h-[38px] rounded-lg bg-[#18834b] px-[13px] text-[10px] font-bold text-white hover:bg-[#116d3e]" type="submit">Create invitation</button>
+            <button className="h-[38px] rounded-lg bg-[#18834b] px-[13px] text-[10px] font-bold text-white hover:bg-[#116d3e]" type="submit">{member ? "Save changes" : "Add staff member"}</button>
           </div>
         </form>
       </section>
@@ -74,11 +67,37 @@ function InviteModal({ onClose, onInvite }: {
 }
 
 export default function StaffAccessPage() {
-  const [staff, setStaff] = useLocalStorageState("greenmart:demo:staff:v1", initialStaff);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("All staff");
   const [search, setSearch] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
+
+  const loadStaff = useCallback(async () => {
+    try {
+      const response = await backendRequest<{ staff: StaffMember[] }>("/staff");
+      setStaff(response.staff);
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load staff.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadStaff(); }, 0);
+    const interval = window.setInterval(() => { void loadStaff(); }, 30_000);
+    window.addEventListener("focus", loadStaff);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", loadStaff);
+    };
+  }, [loadStaff]);
 
   const visibleStaff = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -93,40 +112,58 @@ export default function StaffAccessPage() {
     window.setTimeout(() => setNotice(""), 3200);
   }
 
-  function createInvitation(event: FormEvent<HTMLFormElement>) {
+  async function createInvitation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const name = String(data.get("name")).trim();
     const email = String(data.get("email")).trim().toLowerCase();
-    const duplicate = staff.some((member) => member.email.toLowerCase() === email);
+    const duplicate = !editingMember && staff.some((member) => member.email.toLowerCase() === email);
     if (duplicate) {
       notify("A staff member with this email already exists.");
       return;
     }
     const role = String(data.get("role")) as StaffRole;
-    setStaff((current) => [{
-      id: Date.now(),
+    const input = {
       name,
       email,
       initials: name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join(""),
       role,
-      status: "Invitation pending",
-      lastActive: "Invite created just now",
-    }, ...current]);
-    setInviteOpen(false);
-    notify(`Demo invitation created for ${name}. No email was sent.`);
+      status: editingMember?.status ?? "Invitation pending" as StaffStatus,
+      lastActive: editingMember?.lastActive ?? "Directory record created",
+    };
+    try {
+      if (editingMember) {
+        const { staffMember } = await backendRequest<{ staffMember: StaffMember }>(`/staff/${editingMember.id}`, { method: "PUT", body: JSON.stringify(input) });
+        setStaff((current) => current.map((member) => member.id === staffMember.id ? staffMember : member));
+      } else {
+        const { staffMember } = await backendRequest<{ staffMember: StaffMember }>("/staff", { method: "POST", body: JSON.stringify(input) });
+        setStaff((current) => [staffMember, ...current]);
+      }
+      setInviteOpen(false);
+      setEditingMember(null);
+      notify(editingMember ? `${name} updated.` : `${name} added to the staff directory. No email was sent.`);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save staff record.");
+    }
   }
 
   function toggleSuspension(member: StaffMember) {
     if (member.role === "Owner") return;
     if (member.status === "Invitation pending") {
-      setStaff((current) => current.filter((item) => item.id !== member.id));
-      notify(`Demo invitation for ${member.name} cancelled.`);
+      void backendRequest<void>(`/staff/${member.id}`, { method: "DELETE" }).then(() => {
+        setStaff((current) => current.filter((item) => item.id !== member.id));
+        notify(`Invitation record for ${member.name} deleted.`);
+      }).catch((deleteError: unknown) => setError(deleteError instanceof Error ? deleteError.message : "Unable to delete staff record."));
       return;
     }
     const status: StaffStatus = member.status === "Suspended" ? "Active" : "Suspended";
-    setStaff((current) => current.map((item) => item.id === member.id ? { ...item, status, lastActive: status === "Active" ? "Active just now" : "Access paused just now" } : item));
-    notify(`${member.name}'s demo access marked ${status.toLowerCase()}.`);
+    void backendRequest<{ staffMember: StaffMember }>(`/staff/${member.id}`, {
+      method: "PUT",
+      body: JSON.stringify({ ...member, status, lastActive: status === "Active" ? "Active just now" : "Access paused just now" }),
+    }).then(({ staffMember }) => {
+      setStaff((current) => current.map((item) => item.id === staffMember.id ? staffMember : item));
+      notify(`${member.name}'s directory status marked ${status.toLowerCase()}.`);
+    }).catch((updateError: unknown) => setError(updateError instanceof Error ? updateError.message : "Unable to update staff record."));
   }
 
   const activeCount = staff.filter((member) => member.status === "Active").length;
@@ -142,10 +179,11 @@ export default function StaffAccessPage() {
         <div className="mx-auto w-full max-w-[1520px] px-[38px] py-8 max-[1200px]:px-[26px] max-[640px]:px-[15px] max-[640px]:py-6">
           <div className="mb-[23px] flex items-center justify-between gap-[18px] max-[640px]:items-start max-[640px]:flex-col">
             <div><p className="m-0 text-[9px] font-bold tracking-[1.05px] text-[#89948d]">TEAM MANAGEMENT</p><h1 className="mb-1.5 mt-2 text-[27px] font-bold tracking-[-0.9px] max-[640px]:text-[23px]">Staff &amp; Access</h1><p className="m-0 text-[11px] text-[#818b85]">Manage admin team members and their operational roles.</p></div>
-            <button className="inline-flex h-[38px] items-center gap-[7px] rounded-lg bg-[#18834b] px-[13px] text-[10px] font-bold text-white hover:bg-[#116d3e] max-[640px]:w-full max-[640px]:justify-center" type="button" onClick={() => setInviteOpen(true)}><AdminIcon name="plus" size={16} />Invite staff</button>
+            <button className="inline-flex h-[38px] items-center gap-[7px] rounded-lg bg-[#18834b] px-[13px] text-[10px] font-bold text-white hover:bg-[#116d3e] max-[640px]:w-full max-[640px]:justify-center" type="button" onClick={() => { setEditingMember(null); setInviteOpen(true); }}><AdminIcon name="plus" size={16} />Add staff</button>
           </div>
 
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-[#e9edea] bg-white px-3 py-2.5 text-[8px] leading-[1.5] text-[#89948d]"><AdminIcon name="alert" size={15} /><span>Demo access management only. Invitations do not send email, roles do not grant/restrict routes, and suspension is not authentication enforcement. Add server-side authorization before launch.</span></div>
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-[#e9edea] bg-white px-3 py-2.5 text-[8px] leading-[1.5] text-[#89948d]"><AdminIcon name="alert" size={15} /><span>Staff directory records are saved to the backend. Invitations do not send email, and roles/statuses do not grant, restrict, or suspend authenticated access.</span></div>
+          {error && <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[9px] text-red-700" role="alert"><span>{error}</span><button className="font-bold underline" type="button" onClick={() => void loadStaff()}>Retry</button></div>}
 
           <section className="mb-[17px] grid grid-cols-4 gap-[13px] max-[980px]:grid-cols-2 max-[640px]:gap-2" aria-label="Team summary">
             <article className="grid min-h-[91px] grid-cols-[37px_1fr] grid-rows-2 content-center gap-x-[11px] rounded-[10px] border border-[#edf0ee] bg-white p-3.5 max-[640px]:min-h-[80px] max-[640px]:gap-x-2 max-[640px]:p-2.5"><span className="row-span-2 grid size-9 place-items-center self-center rounded-[9px] bg-[#eaf2fb] text-[#4b81bc]"><AdminIcon name="customers" /></span><div className="flex items-baseline justify-between gap-2"><span className="text-[9px] text-[#78837c]">Team members</span><strong className="text-xl font-bold">{staff.length}</strong></div><small className="self-end text-[8px] text-[#9aa39d]">Including store owner</small></article>
@@ -178,18 +216,19 @@ export default function StaffAccessPage() {
                     <td className="px-2.5"><span className={`inline-flex whitespace-nowrap rounded-full px-[7px] py-[5px] text-[8px] font-semibold ${roleTone(member.role)}`}>{member.role}</span></td>
                     <td className="px-2.5"><span className={`inline-flex whitespace-nowrap rounded-full px-[7px] py-[5px] text-[8px] font-semibold ${statusTone(member.status)}`}>{member.status}</span></td>
                     <td className="whitespace-nowrap px-2.5 text-[8px] text-[#89948d]">{member.lastActive}</td>
-                    <td className="px-2.5 pr-[17px]">{member.role === "Owner" ? <span className="text-[8px] text-[#a0a9a3]">Primary owner</span> : <button className={`h-[29px] rounded-md border px-2 text-[8px] font-bold ${member.status === "Suspended" ? "border-[#dcebe1] bg-[#f4f9f5] text-[#217847]" : "border-[#f0d8d4] bg-white text-[#bf5c50]"}`} type="button" onClick={() => toggleSuspension(member)}>{member.status === "Suspended" ? "Restore access" : member.status === "Invitation pending" ? "Cancel invite" : "Suspend"}</button>}</td>
+                    <td className="px-2.5 pr-[17px]">{member.role === "Owner" ? <span className="text-[8px] text-[#a0a9a3]">Primary owner</span> : <div className="flex gap-1"><button className="h-[29px] rounded-md border border-[#e5ebe7] px-2 text-[8px] font-bold text-[#217847]" type="button" onClick={() => { setEditingMember(member); setInviteOpen(true); }}>Edit</button><button className={`h-[29px] rounded-md border px-2 text-[8px] font-bold ${member.status === "Suspended" ? "border-[#dcebe1] bg-[#f4f9f5] text-[#217847]" : "border-[#f0d8d4] bg-white text-[#bf5c50]"}`} type="button" onClick={() => toggleSuspension(member)}>{member.status === "Suspended" ? "Restore" : member.status === "Invitation pending" ? "Delete invite" : "Suspend"}</button><button className="h-[29px] rounded-md border border-[#f0d8d4] px-2 text-[8px] font-bold text-[#bf5c50]" type="button" onClick={() => { if (!window.confirm(`Delete ${member.name} from the directory?`)) return; void backendRequest<void>(`/staff/${member.id}`, { method: "DELETE" }).then(() => { setStaff((current) => current.filter((item) => item.id !== member.id)); notify("Staff record deleted."); }).catch((deleteError: unknown) => setError(deleteError instanceof Error ? deleteError.message : "Unable to delete staff record.")); }}>Delete</button></div>}</td>
                   </tr>)}
+                  {loading && <tr><td className="h-[70px] text-center text-[9px] text-[#89948d]" colSpan={5}>Loading staff…</td></tr>}
                   {visibleStaff.length === 0 && <tr><td className="h-[190px] text-center" colSpan={5}><AdminIcon name="search" size={22} /><strong className="my-2 block text-[11px] text-[#39453e]">No staff found</strong><small className="text-[9px] text-[#89948d]">Try another search or status filter.</small><button className="mt-2 block w-full border-0 bg-transparent text-[9px] font-bold text-[#217847]" type="button" onClick={() => { setSearch(""); setActiveFilter("All staff"); }}>Clear filters</button></td></tr>}
                 </tbody>
               </table>
             </div>
           </section>
-          <p className="ml-px mt-3 text-[9px] text-[#9ca69f]">Demo team only · Changes persist in this browser&apos;s local storage, not a shared backend.</p>
+          <p className="ml-px mt-3 text-[9px] text-[#9ca69f]">This is a staff directory, not staff authentication or authorization.</p>
         </div>
       </main>
       {notice && <div className="fixed bottom-5 right-5 z-40 rounded-lg bg-[#1d3325] px-4 py-3 text-[10px] font-semibold text-white shadow-lg max-[640px]:bottom-3 max-[640px]:left-3 max-[640px]:right-3" role="status">{notice}</div>}
-      {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} onInvite={createInvitation} />}
+      {inviteOpen && <InviteModal member={editingMember} onClose={() => { setInviteOpen(false); setEditingMember(null); }} onInvite={createInvitation} />}
     </div>
   );
 }

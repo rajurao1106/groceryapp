@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { AdminIcon, AdminSidebar, AdminTopbar } from "@/components/admin-chrome";
 import { useOrdersDemo, type DemoOrder, type OrderStatus } from "@/components/orders-demo-provider";
-import { useDeliveryPartnersDemo } from "@/components/delivery-partners-demo-provider";
+import { useDeliveryPartnersDemo, type DeliveryPartner } from "@/components/delivery-partners-demo-provider";
+import type { OrderInput } from "@/components/orders-demo-provider";
 
 const orderFilters = ["All orders", "Needs action", "Preparing", "On the way", "Delivered", "Cancelled"] as const;
 
@@ -211,13 +212,102 @@ function OrderDetails({ order, onClose, onStatusChange, availablePartners }: {
   );
 }
 
+function OrderForm({ order, partners, onClose, onSave }: {
+  order: DemoOrder | null;
+  partners: DeliveryPartner[];
+  onClose: () => void;
+  onSave: (input: OrderInput) => Promise<void>;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    let parsedItems: unknown;
+    try {
+      parsedItems = JSON.parse(String(data.get("items")));
+    } catch {
+      setFormError("Items must be valid JSON.");
+      return;
+    }
+    if (!Array.isArray(parsedItems) || parsedItems.length === 0 || !parsedItems.every((item) =>
+      typeof item === "object" && item !== null &&
+      typeof item.name === "string" && typeof item.packSize === "string" &&
+      Number.isInteger(item.quantity) && item.quantity > 0 &&
+      typeof item.price === "number" && Number.isFinite(item.price) && item.price >= 0 &&
+      typeof item.image === "string"
+    )) {
+      setFormError("Enter at least one item with name, packSize, positive quantity, non-negative numeric price, and image.");
+      return;
+    }
+    const customer = String(data.get("customer")).trim();
+    const selectedPartnerId = String(data.get("deliveryPartnerId"));
+    const deliveryPartnerId = selectedPartnerId ? Number(selectedPartnerId) : null;
+    const partner = deliveryPartnerId === null ? null : partners.find((item) => item.id === deliveryPartnerId);
+    const status = String(data.get("status")) as OrderStatus;
+    if (["Assigned", "Out for delivery"].includes(status) && !partner) {
+      setFormError("Select a delivery partner for an assigned order.");
+      return;
+    }
+    const input: OrderInput = {
+      ...(order ? { id: order.id, customerId: order.customerId } : (String(data.get("id")).trim() ? { id: String(data.get("id")).trim() } : {})),
+      customer,
+      initials: customer.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join(""),
+      avatar: order?.avatar ?? "mint",
+      phone: String(data.get("phone")).trim(),
+      address: String(data.get("address")).trim(),
+      time: order?.time ?? new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+      minutesAgo: order?.minutesAgo ?? 0,
+      status,
+      paymentMethod: String(data.get("paymentMethod")) as DemoOrder["paymentMethod"],
+      paymentStatus: String(data.get("paymentStatus")) as DemoOrder["paymentStatus"],
+      deliveryPartner: partner?.name ?? null,
+      deliveryPartnerId,
+      items: parsedItems as OrderInput["items"],
+    };
+    setSaving(true);
+    setFormError("");
+    try {
+      await onSave(input);
+    } catch (saveError) {
+      setFormError(saveError instanceof Error ? saveError.message : "Unable to save order.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 grid place-items-center overflow-y-auto bg-[#142019]/45 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <form className="my-4 w-full max-w-[620px] space-y-3 rounded-xl bg-white p-5 shadow-xl" onSubmit={submit}>
+        <h2 className="m-0 text-[16px] font-bold text-[#1b2820]">{order ? `Edit ${order.id}` : "Create order"}</h2>
+        {formError && <p className="m-0 rounded bg-red-50 p-2 text-[9px] text-red-700" role="alert">{formError}</p>}
+        <div className="grid grid-cols-2 gap-3 max-[520px]:grid-cols-1">
+          {!order && <label className="text-[9px] font-semibold text-[#536057]">Order ID (optional)<input className="mt-1 h-9 w-full rounded border px-2 text-[10px]" name="id" maxLength={120} /></label>}
+          <label className="text-[9px] font-semibold text-[#536057]">Customer name<input className="mt-1 h-9 w-full rounded border px-2 text-[10px]" name="customer" defaultValue={order?.customer ?? ""} required /></label>
+          <label className="text-[9px] font-semibold text-[#536057]">Phone<input className="mt-1 h-9 w-full rounded border px-2 text-[10px]" name="phone" defaultValue={order?.phone ?? ""} required /></label>
+          <label className="col-span-2 text-[9px] font-semibold text-[#536057] max-[520px]:col-span-1">Delivery address<input className="mt-1 h-9 w-full rounded border px-2 text-[10px]" name="address" defaultValue={order?.address ?? ""} required /></label>
+          <label className="text-[9px] font-semibold text-[#536057]">Status<select className="mt-1 h-9 w-full rounded border bg-white px-2 text-[10px]" name="status" defaultValue={order?.status ?? "Pending"}>{["Pending", "Confirmed", "Preparing", "Packed", "Assigned", "Out for delivery", "Delivered", "Cancelled"].map((status) => <option key={status}>{status}</option>)}</select></label>
+          <label className="text-[9px] font-semibold text-[#536057]">Payment method<select className="mt-1 h-9 w-full rounded border bg-white px-2 text-[10px]" name="paymentMethod" defaultValue={order?.paymentMethod ?? "UPI"}>{["UPI", "Card", "Cash on delivery"].map((method) => <option key={method}>{method}</option>)}</select></label>
+          <label className="text-[9px] font-semibold text-[#536057]">Payment status<select className="mt-1 h-9 w-full rounded border bg-white px-2 text-[10px]" name="paymentStatus" defaultValue={order?.paymentStatus ?? "Pending"}>{["Paid", "Pending", "Refunded"].map((status) => <option key={status}>{status}</option>)}</select></label>
+          <label className="text-[9px] font-semibold text-[#536057]">Delivery partner<select className="mt-1 h-9 w-full rounded border bg-white px-2 text-[10px]" name="deliveryPartnerId" defaultValue={order?.deliveryPartnerId?.toString() ?? ""}><option value="">Unassigned</option>{partners.filter((partner) => partner.status === "Available" || partner.id === order?.deliveryPartnerId).map((partner) => <option value={partner.id} key={partner.id}>{partner.name} · {partner.status}</option>)}</select></label>
+        </div>
+        <label className="block text-[9px] font-semibold text-[#536057]">Items (JSON)<textarea className="mt-1 min-h-28 w-full rounded border p-2 font-mono text-[9px]" name="items" defaultValue={JSON.stringify(order?.items ?? [{ name: "", packSize: "", quantity: 1, price: 0, image: "" }], null, 2)} required /></label>
+        <p className="m-0 text-[8px] text-[#89948d]">Totals are calculated from item quantities and prices. Customer profiles are created or matched by phone number.</p>
+        <div className="flex justify-end gap-2"><button className="h-9 rounded-md border px-3 text-[9px]" type="button" onClick={onClose}>Cancel</button><button className="h-9 rounded-md bg-[#18834b] px-3 text-[9px] font-bold text-white disabled:opacity-50" type="submit" disabled={saving}>{saving ? "Saving…" : order ? "Save order" : "Create order"}</button></div>
+      </form>
+    </div>
+  );
+}
+
 export default function OrdersPage() {
-  const { orders, setOrders } = useOrdersDemo();
-  const { partners, setPartners } = useDeliveryPartnersDemo();
+  const { orders, loading, error: ordersError, reload, createOrder, updateOrder, updateOrderStatus: saveOrderStatus, updateOrderPayment, deleteOrder } = useOrdersDemo();
+  const { partners, updatePartnerStatus } = useDeliveryPartnersDemo();
   const [activeFilter, setActiveFilter] = useState<(typeof orderFilters)[number]>("All orders");
   const [search, setSearch] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<DemoOrder | null>(null);
   const [notice, setNotice] = useState("");
+  const [formOrder, setFormOrder] = useState<DemoOrder | null | undefined>(undefined);
   const availablePartners = partners.filter((partner) => partner.status === "Available");
 
   const visibleOrders = useMemo(() => {
@@ -247,34 +337,34 @@ export default function OrdersPage() {
     revenue: orders.filter((order) => order.paymentStatus === "Paid").reduce((sum, order) => sum + order.amount, 0),
   }), [orders]);
 
-  function updateOrderStatus(order: DemoOrder, nextStatus: OrderStatus, partnerId?: number) {
+  async function updateOrderStatus(order: DemoOrder, nextStatus: OrderStatus, partnerId?: number) {
     const selectedPartner = partnerId === undefined ? undefined : availablePartners.find((partner) => partner.id === partnerId);
     if (nextStatus === "Assigned" && !order.deliveryPartner && !selectedPartner) {
       setNotice("Select an available delivery partner before assigning this order.");
       window.setTimeout(() => setNotice(""), 3200);
       return;
     }
-    const deliveryPartner = selectedPartner?.name ?? order.deliveryPartner;
-    setOrders((current) => current.map((item) => item.id !== order.id ? item : {
-      ...item,
-      status: nextStatus,
-      deliveryPartner,
-      paymentStatus: nextStatus === "Cancelled" && item.paymentStatus === "Paid" ? "Refunded" : item.paymentStatus,
-    }));
-    setSelectedOrder((current) => current?.id === order.id
-      ? {
-          ...current,
-          status: nextStatus,
-          deliveryPartner,
-          paymentStatus: nextStatus === "Cancelled" && current.paymentStatus === "Paid" ? "Refunded" : current.paymentStatus,
-        }
-      : current);
-    if (selectedPartner) {
-        setPartners((current) => current.map((partner) => partner.id === selectedPartner.id
-          ? { ...partner, status: "On delivery" }
-          : partner));
+    try {
+      let updated = await saveOrderStatus(order.id, nextStatus, selectedPartner?.id);
+      if (nextStatus === "Cancelled" && updated.paymentStatus === "Paid") {
+        updated = await updateOrderPayment(order.id, "Refunded");
+      }
+      if (selectedPartner) await updatePartnerStatus(selectedPartner.id, "On delivery");
+      const wasAssigned = ["Assigned", "Out for delivery"].includes(order.status);
+      const isAssigned = ["Assigned", "Out for delivery"].includes(updated.status);
+      if (wasAssigned && !isAssigned && order.deliveryPartnerId) {
+        const anotherActiveOrder = orders.some((item) =>
+          item.id !== order.id &&
+          item.deliveryPartnerId === order.deliveryPartnerId &&
+          ["Assigned", "Out for delivery"].includes(item.status)
+        );
+        if (!anotherActiveOrder) await updatePartnerStatus(order.deliveryPartnerId, "Available");
+      }
+      setSelectedOrder(updated);
+      setNotice(`${order.id} marked ${nextStatus.toLowerCase()}.`);
+    } catch (updateError) {
+      setNotice(updateError instanceof Error ? updateError.message : "Unable to update order.");
     }
-    setNotice(`${order.id} marked ${nextStatus.toLowerCase()}. Demo state only.`);
     window.setTimeout(() => setNotice(""), 3200);
   }
 
@@ -301,8 +391,9 @@ export default function OrdersPage() {
               <h1 className="mb-1.5 mt-2 text-[27px] font-bold tracking-[-0.9px] max-[640px]:text-[23px]">Orders</h1>
               <p className="m-0 text-[11px] text-[#818b85]">Review, prepare and fulfil customer orders from one place.</p>
             </div>
-            <div className="flex items-center gap-1.5 rounded-full border border-[#e3eee6] bg-[#f5faf6] px-2.5 py-1.5 text-[8px] font-semibold text-[#44815a] before:size-1.5 before:rounded-full before:bg-[#76b387]">Demo orders</div>
+            <button className="h-[38px] rounded-lg bg-[#18834b] px-[13px] text-[10px] font-bold text-white" type="button" onClick={() => setFormOrder(null)}>Create order</button>
           </div>
+          {ordersError && <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[9px] text-red-700" role="alert"><span>{ordersError}</span><button className="font-bold underline" type="button" onClick={() => void reload()}>Retry</button></div>}
 
           <section className="mb-[17px] grid grid-cols-4 gap-[13px] max-[980px]:grid-cols-2 max-[640px]:gap-2" aria-label="Order summary">
             <article className="grid min-h-[91px] grid-cols-[37px_1fr] grid-rows-2 content-center gap-x-[11px] rounded-[10px] border border-[#edf0ee] bg-white p-3.5 max-[640px]:min-h-[80px] max-[640px]:gap-x-2 max-[640px]:p-2.5">
@@ -386,12 +477,31 @@ export default function OrdersPage() {
                       <td><StatusPill status={order.status} /></td>
                       <td className="whitespace-nowrap px-2.5 text-[8px] text-[#89948d]">{order.time}</td>
                       <td>
-                        <button className="inline-flex h-[29px] items-center gap-1 rounded-md border border-[#e5ebe7] bg-white px-2 text-[8px] font-bold text-[#59655e] hover:border-[#b9d5c2] hover:text-[#217847]" type="button" onClick={() => setSelectedOrder(order)}>
-                          View <OrdersIcon name="chevron" size={13} />
-                        </button>
+                        <div className="flex gap-1">
+                          <button className="inline-flex h-[29px] items-center gap-1 rounded-md border border-[#e5ebe7] bg-white px-2 text-[8px] font-bold text-[#59655e] hover:border-[#b9d5c2] hover:text-[#217847]" type="button" onClick={() => setSelectedOrder(order)}>View</button>
+                          <button className="h-[29px] rounded-md border border-[#e5ebe7] px-2 text-[8px] font-bold text-[#217847]" type="button" onClick={() => setFormOrder(order)}>Edit</button>
+                          <button className="h-[29px] rounded-md border border-[#f0d8d4] px-2 text-[8px] font-bold text-[#bf5c50]" type="button" onClick={async () => {
+                            if (!window.confirm(`Delete order ${order.id}?`)) return;
+                            try {
+                              await deleteOrder(order.id);
+                              if (order.deliveryPartnerId && ["Assigned", "Out for delivery"].includes(order.status)) {
+                                const hasOtherActiveOrder = orders.some((item) => item.id !== order.id &&
+                                  item.deliveryPartnerId === order.deliveryPartnerId &&
+                                  ["Assigned", "Out for delivery"].includes(item.status));
+                                const partner = partners.find((item) => item.id === order.deliveryPartnerId);
+                                if (!hasOtherActiveOrder && partner?.status === "On delivery") {
+                                  await updatePartnerStatus(order.deliveryPartnerId, "Available");
+                                }
+                              }
+                              setNotice(`${order.id} deleted.`);
+                            }
+                            catch (deleteError) { setNotice(deleteError instanceof Error ? deleteError.message : "Unable to delete order."); }
+                          }}>Delete</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
+                  {loading && <tr><td className="h-[70px] text-center text-[9px] text-[#89948d]" colSpan={8}>Loading orders…</td></tr>}
                   {visibleOrders.length === 0 && (
                     <tr><td className="h-[210px] text-center" colSpan={8}>
                       <OrdersIcon name="search" size={22} />
@@ -404,11 +514,11 @@ export default function OrdersPage() {
               </table>
             </div>
             <div className="flex items-center justify-between gap-2.5 border-t border-[#edf0ee] px-[17px] py-3 text-[9px] text-[#929c95]">
-              <span>Showing <strong className="text-[#657169]">{visibleOrders.length ? 1 : 0}–{visibleOrders.length}</strong> of <strong className="text-[#657169]">{visibleOrders.length}</strong> demo orders</span>
+              <span>Showing <strong className="text-[#657169]">{visibleOrders.length ? 1 : 0}–{visibleOrders.length}</strong> of <strong className="text-[#657169]">{visibleOrders.length}</strong> orders</span>
               <div className="flex gap-1.5"><button className="h-7 rounded-md border border-[#e7ebe8] bg-white px-[9px] text-[8px] text-[#929c95] opacity-65" type="button" disabled>Previous</button><button className="h-7 rounded-md border border-[#e7ebe8] bg-white px-[9px] text-[8px] text-[#929c95] opacity-65" type="button" disabled>Next</button></div>
             </div>
           </section>
-          <p className="ml-px mt-3 text-[9px] text-[#9ca69f]">Demo orders · Changes are saved in this browser&apos;s local storage, not a shared backend.</p>
+          <p className="ml-px mt-3 text-[9px] text-[#9ca69f]">Order changes are saved to the shared backend.</p>
         </div>
       </main>
 
@@ -421,6 +531,28 @@ export default function OrdersPage() {
           availablePartners={availablePartners}
         />
       )}
+      {formOrder !== undefined && <OrderForm order={formOrder} onClose={() => setFormOrder(undefined)} onSave={async (input) => {
+        const normalized = input.status === "Cancelled" && input.paymentStatus === "Paid"
+          ? { ...input, paymentStatus: "Refunded" as const }
+          : input;
+        const saved = formOrder
+          ? await updateOrder({ ...formOrder, ...normalized, id: formOrder.id, amount: formOrder.amount, itemCount: formOrder.itemCount })
+          : await createOrder(normalized);
+        if (saved.deliveryPartnerId && ["Assigned", "Out for delivery"].includes(saved.status)) {
+          await updatePartnerStatus(saved.deliveryPartnerId, "On delivery");
+        }
+        if (formOrder?.deliveryPartnerId && formOrder.deliveryPartnerId !== saved.deliveryPartnerId &&
+          ["Assigned", "Out for delivery"].includes(formOrder.status)) {
+          const hasOtherActiveOrder = orders.some((item) => item.id !== formOrder.id &&
+            item.deliveryPartnerId === formOrder.deliveryPartnerId &&
+            ["Assigned", "Out for delivery"].includes(item.status));
+          const oldPartner = partners.find((partner) => partner.id === formOrder.deliveryPartnerId);
+          if (!hasOtherActiveOrder && oldPartner?.status === "On delivery") {
+            await updatePartnerStatus(formOrder.deliveryPartnerId, "Available");
+          }
+        }
+        setFormOrder(undefined);
+      }} partners={partners} />}
     </div>
   );
 }

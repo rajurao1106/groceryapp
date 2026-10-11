@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { useLocalStorageState } from "@/hooks/use-local-storage-state";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { backendRequest } from "@/lib/backend-api";
 
 export type PartnerStatus = "Available" | "On delivery" | "Offline" | "Pending review";
 
@@ -18,26 +18,83 @@ export type DeliveryPartner = {
   joined: string;
 };
 
-export const initialPartners: DeliveryPartner[] = [
-  { id: 1, name: "Arjun Singh", phone: "+91 98765 10234", initials: "AS", zone: "Indiranagar", vehicle: "Motorcycle", status: "On delivery", deliveries: 248, rating: 4.9, joined: "12 Aug 2026" },
-  { id: 2, name: "Ravi Verma", phone: "+91 98234 56710", initials: "RV", zone: "Koramangala", vehicle: "Motorcycle", status: "Available", deliveries: 196, rating: 4.8, joined: "18 Aug 2026" },
-  { id: 3, name: "Neha Kumari", phone: "+91 99001 22881", initials: "NK", zone: "HSR Layout", vehicle: "Scooter", status: "On delivery", deliveries: 172, rating: 4.9, joined: "24 Aug 2026" },
-  { id: 4, name: "Karan Mehta", phone: "+91 98450 33442", initials: "KM", zone: "Whitefield", vehicle: "Motorcycle", status: "Offline", deliveries: 121, rating: 4.7, joined: "02 Sep 2026" },
-  { id: 5, name: "Pooja Nair", phone: "+91 98123 76009", initials: "PN", zone: "Jayanagar", vehicle: "Bicycle", status: "Pending review", deliveries: 0, rating: null, joined: "Today" },
-];
+export type DeliveryPartnerInput = Omit<DeliveryPartner, "id">;
 
 type DeliveryPartnersContextValue = {
   partners: DeliveryPartner[];
-  setPartners: Dispatch<SetStateAction<DeliveryPartner[]>>;
+  loading: boolean;
+  error: string;
+  reload: () => Promise<void>;
+  createPartner: (partner: DeliveryPartnerInput) => Promise<DeliveryPartner>;
+  updatePartner: (partner: DeliveryPartner) => Promise<DeliveryPartner>;
+  updatePartnerStatus: (id: number, status: PartnerStatus) => Promise<DeliveryPartner>;
+  deletePartner: (id: number) => Promise<void>;
 };
 
 const DeliveryPartnersContext = createContext<DeliveryPartnersContextValue | null>(null);
 
 export function DeliveryPartnersDemoProvider({ children }: { children: ReactNode }) {
-  const [partners, setPartners] = useLocalStorageState("greenmart:demo:delivery-partners:v1", initialPartners);
+  const [partners, setPartners] = useState<DeliveryPartner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const reload = useCallback(async () => {
+    try {
+      const response = await backendRequest<{ partners: DeliveryPartner[] }>("/delivery-partners");
+      setPartners(response.partners);
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load delivery partners.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void reload(); }, 0);
+    const interval = window.setInterval(() => { void reload(); }, 30_000);
+    window.addEventListener("focus", reload);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", reload);
+    };
+  }, [reload]);
+
+  const createPartner = useCallback(async (input: DeliveryPartnerInput) => {
+    const { partner } = await backendRequest<{ partner: DeliveryPartner }>("/delivery-partners", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    setPartners((current) => [partner, ...current]);
+    return partner;
+  }, []);
+
+  const updatePartner = useCallback(async (partner: DeliveryPartner) => {
+    const { partner: saved } = await backendRequest<{ partner: DeliveryPartner }>(`/delivery-partners/${partner.id}`, {
+      method: "PUT",
+      body: JSON.stringify(partner),
+    });
+    setPartners((current) => current.map((item) => item.id === saved.id ? saved : item));
+    return saved;
+  }, []);
+
+  const updatePartnerStatus = useCallback(async (id: number, status: PartnerStatus) => {
+    const { partner } = await backendRequest<{ partner: DeliveryPartner }>(`/delivery-partners/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    setPartners((current) => current.map((item) => item.id === partner.id ? partner : item));
+    return partner;
+  }, []);
+
+  const deletePartner = useCallback(async (id: number) => {
+    await backendRequest<void>(`/delivery-partners/${id}`, { method: "DELETE" });
+    setPartners((current) => current.filter((partner) => partner.id !== id));
+  }, []);
 
   return (
-    <DeliveryPartnersContext.Provider value={{ partners, setPartners }}>
+    <DeliveryPartnersContext.Provider value={{ partners, loading, error, reload, createPartner, updatePartner, updatePartnerStatus, deletePartner }}>
       {children}
     </DeliveryPartnersContext.Provider>
   );
@@ -45,8 +102,6 @@ export function DeliveryPartnersDemoProvider({ children }: { children: ReactNode
 
 export function useDeliveryPartnersDemo() {
   const context = useContext(DeliveryPartnersContext);
-  if (!context) {
-    throw new Error("useDeliveryPartnersDemo must be used inside DeliveryPartnersDemoProvider");
-  }
+  if (!context) throw new Error("useDeliveryPartnersDemo must be used inside DeliveryPartnersDemoProvider");
   return context;
 }

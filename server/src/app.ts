@@ -4,8 +4,13 @@ import helmet from "@fastify/helmet";
 import Fastify from "fastify";
 import { initializeFirebase } from "./plugins/firebase.js";
 import { adminAuthRoutes } from "./routes/admin-auth.js";
+import { customerRoutes } from "./routes/customers.js";
+import { deliveryPartnerRoutes } from "./routes/delivery-partners.js";
+import { orderRoutes } from "./routes/orders.js";
 import { paymentRoutes } from "./routes/payments.js";
 import { productRoutes } from "./routes/products.js";
+import { settingsRoutes } from "./routes/settings.js";
+import { staffRoutes } from "./routes/staff.js";
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -53,6 +58,11 @@ export async function buildApp() {
   await app.register(adminAuthRoutes, { prefix: "/api" });
   await app.register(productRoutes, { prefix: "/api" });
   await app.register(paymentRoutes, { prefix: "/api" });
+  await app.register(orderRoutes, { prefix: "/api" });
+  await app.register(customerRoutes, { prefix: "/api" });
+  await app.register(deliveryPartnerRoutes, { prefix: "/api" });
+  await app.register(settingsRoutes, { prefix: "/api" });
+  await app.register(staffRoutes, { prefix: "/api" });
 
   app.setErrorHandler((error, request, reply) => {
     request.log.error(error);

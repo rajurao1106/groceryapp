@@ -13,9 +13,10 @@ function statusStyles(status: PartnerStatus) {
   return "bg-[#f1f3f1] text-[#7b8680]";
 }
 
-function PartnerModal({ onClose, onSave }: {
+function PartnerModal({ partner, onClose, onSave }: {
+  partner: DeliveryPartner | null;
   onClose: () => void;
-  onSave: (event: FormEvent<HTMLFormElement>) => void;
+  onSave: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }) {
   return (
     <div className="fixed inset-0 z-30 grid place-items-center overflow-y-auto bg-[#142019]/45 p-5 max-[640px]:items-end max-[640px]:p-2" role="presentation" onMouseDown={(event) => {
@@ -23,21 +24,21 @@ function PartnerModal({ onClose, onSave }: {
     }}>
       <section className="max-h-[calc(100vh-40px)] w-full max-w-[560px] overflow-y-auto rounded-[13px] border border-[#e9edea] bg-white shadow-[0_20px_70px_rgba(12,27,17,0.2)] max-[640px]:max-h-[calc(100vh-16px)]" role="dialog" aria-modal="true" aria-labelledby="partner-modal-title">
         <div className="flex items-start justify-between gap-3 border-b border-[#edf0ee] px-[22px] py-5 max-[640px]:px-[15px]">
-          <div><p className="m-0 text-[8px] font-bold tracking-[1px] text-[#89948d]">PARTNER ONBOARDING</p><h2 className="mb-1.5 mt-1.5 text-[19px] font-bold text-[#1b2820]" id="partner-modal-title">Add delivery partner</h2><p className="m-0 text-[10px] text-[#89948d]">Add a demo profile. Document verification comes later.</p></div>
+          <div><p className="m-0 text-[8px] font-bold tracking-[1px] text-[#89948d]">PARTNER PROFILE</p><h2 className="mb-1.5 mt-1.5 text-[19px] font-bold text-[#1b2820]" id="partner-modal-title">{partner ? "Edit delivery partner" : "Add delivery partner"}</h2><p className="m-0 text-[10px] text-[#89948d]">Update contact and service details.</p></div>
           <button className="grid size-[31px] shrink-0 place-items-center rounded-md border border-[#edf0ee] bg-white text-[#79847d] hover:bg-[#f8faf8]" type="button" onClick={onClose} aria-label="Close dialog"><AdminIcon name="close" /></button>
         </div>
         <form className="px-[22px] pb-5 pt-[18px] max-[640px]:px-[15px]" onSubmit={onSave}>
           <div className="grid grid-cols-2 gap-[13px] max-[480px]:grid-cols-1">
-            <label className="col-span-2 flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057] max-[480px]:col-span-1">Full name *<input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="name" placeholder="e.g. Aman Sharma" required autoFocus /></label>
-            <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]">Phone number *<input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="phone" type="tel" pattern="[+]?[0-9 ()-]{10,18}" placeholder="+91 98765 43210" required /></label>
-            <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]">Delivery zone *<input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="zone" placeholder="e.g. Indiranagar" required /></label>
-            <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]">Vehicle type *<select className="h-9 rounded-md border border-[#e4eae6] bg-white px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="vehicle" defaultValue="Motorcycle"><option>Motorcycle</option><option>Scooter</option><option>Bicycle</option><option>Electric vehicle</option></select></label>
-            <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]">Initial status<select className="h-9 rounded-md border border-[#e4eae6] bg-white px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="status" defaultValue="Pending review"><option>Pending review</option><option>Available</option><option>Offline</option></select></label>
+            <label className="col-span-2 flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057] max-[480px]:col-span-1">Full name *<input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="name" placeholder="e.g. Aman Sharma" defaultValue={partner?.name ?? ""} required autoFocus /></label>
+            <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]">Phone number *<input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="phone" type="tel" pattern="[+]?[0-9 ()-]{10,18}" placeholder="+91 98765 43210" defaultValue={partner?.phone ?? ""} required /></label>
+            <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]">Delivery zone *<input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="zone" placeholder="e.g. Indiranagar" defaultValue={partner?.zone ?? ""} required /></label>
+            <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]">Vehicle type *<select className="h-9 rounded-md border border-[#e4eae6] bg-white px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="vehicle" defaultValue={partner?.vehicle ?? "Motorcycle"}><option>Motorcycle</option><option>Scooter</option><option>Bicycle</option><option>Electric vehicle</option></select></label>
+            <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]">Status<select className="h-9 rounded-md border border-[#e4eae6] bg-white px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="status" defaultValue={partner?.status ?? "Pending review"}><option>Pending review</option><option>Available</option><option>Offline</option><option>On delivery</option></select></label>
           </div>
-          <p className="mt-3 rounded-md bg-[#f7f9f7] p-2.5 text-[8px] leading-[1.6] text-[#89948d]">This demo form does not collect identity, licence or vehicle documents. Add secure document verification when the backend is implemented.</p>
+          <p className="mt-3 rounded-md bg-[#f7f9f7] p-2.5 text-[8px] leading-[1.6] text-[#89948d]">Profile changes are shared. Identity and vehicle document verification are not part of this directory.</p>
           <div className="mt-[17px] flex justify-end gap-2 border-t border-[#edf0ee] pt-[15px]">
             <button className="h-[38px] rounded-lg border border-[#e2e8e4] bg-white px-[13px] text-[10px] font-bold text-[#59655e]" type="button" onClick={onClose}>Cancel</button>
-            <button className="h-[38px] rounded-lg bg-[#18834b] px-[13px] text-[10px] font-bold text-white hover:bg-[#116d3e]" type="submit">Add partner</button>
+            <button className="h-[38px] rounded-lg bg-[#18834b] px-[13px] text-[10px] font-bold text-white hover:bg-[#116d3e]" type="submit">{partner ? "Save changes" : "Add partner"}</button>
           </div>
         </form>
       </section>
@@ -46,11 +47,12 @@ function PartnerModal({ onClose, onSave }: {
 }
 
 export default function DeliveryPartnersPage() {
-  const { partners, setPartners } = useDeliveryPartnersDemo();
+  const { partners, loading, error, reload, createPartner, updatePartner, updatePartnerStatus, deletePartner } = useDeliveryPartnersDemo();
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("All partners");
   const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [editingPartner, setEditingPartner] = useState<DeliveryPartner | null>(null);
 
   const visiblePartners = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -60,34 +62,55 @@ export default function DeliveryPartnersPage() {
     });
   }, [activeFilter, partners, search]);
 
-  function savePartner(event: FormEvent<HTMLFormElement>) {
+  async function savePartner(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const name = String(data.get("name")).trim();
     const partner: DeliveryPartner = {
-      id: Date.now(),
+      id: editingPartner?.id ?? 0,
       name,
       phone: String(data.get("phone")).trim(),
       initials: name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join(""),
       zone: String(data.get("zone")).trim(),
       vehicle: String(data.get("vehicle")),
       status: String(data.get("status")) as PartnerStatus,
-      deliveries: 0,
-      rating: null,
-      joined: "Today",
+      deliveries: editingPartner?.deliveries ?? 0,
+      rating: editingPartner?.rating ?? null,
+      joined: editingPartner?.joined ?? "Today",
     };
-    setPartners((current) => [partner, ...current]);
+    try {
+      if (editingPartner) await updatePartner(partner);
+      else await createPartner({
+        name: partner.name,
+        phone: partner.phone,
+        initials: partner.initials,
+        zone: partner.zone,
+        vehicle: partner.vehicle,
+        status: partner.status,
+        deliveries: partner.deliveries,
+        rating: partner.rating,
+        joined: partner.joined,
+      });
+    } catch (saveError) {
+      setNotice(saveError instanceof Error ? saveError.message : "Unable to save partner.");
+      return;
+    }
     setModalOpen(false);
-    setNotice(`${partner.name} added to demo partners.`);
+    setEditingPartner(null);
+    setNotice(editingPartner ? `${partner.name} updated.` : `${partner.name} added.`);
     window.setTimeout(() => setNotice(""), 3200);
   }
 
-  function toggleAvailability(partnerId: number) {
+  async function toggleAvailability(partnerId: number) {
     const partner = partners.find((item) => item.id === partnerId);
     if (!partner || !["Available", "Offline"].includes(partner.status)) return;
     const status = partner.status === "Available" ? "Offline" : "Available";
-    setPartners((current) => current.map((item) => item.id === partnerId ? { ...item, status } : item));
-    setNotice(`${partner.name} marked ${status.toLowerCase()}. Demo state only.`);
+    try {
+      await updatePartnerStatus(partnerId, status);
+      setNotice(`${partner.name} marked ${status.toLowerCase()}.`);
+    } catch (updateError) {
+      setNotice(updateError instanceof Error ? updateError.message : "Unable to update availability.");
+    }
     window.setTimeout(() => setNotice(""), 3200);
   }
 
@@ -105,8 +128,9 @@ export default function DeliveryPartnersPage() {
         <div className="mx-auto w-full max-w-[1520px] px-[38px] py-8 max-[1200px]:px-[26px] max-[640px]:px-[15px] max-[640px]:py-6">
           <div className="mb-[23px] flex items-center justify-between gap-[18px] max-[640px]:items-start max-[640px]:flex-col">
             <div><p className="m-0 text-[9px] font-bold tracking-[1.05px] text-[#89948d]">LAST-MILE OPERATIONS</p><h1 className="mb-1.5 mt-2 text-[27px] font-bold tracking-[-0.9px] max-[640px]:text-[23px]">Delivery partners</h1><p className="m-0 text-[11px] text-[#818b85]">Manage your delivery team, availability and service areas.</p></div>
-            <button className="inline-flex h-[38px] items-center gap-[7px] rounded-lg bg-[#18834b] px-[13px] text-[10px] font-bold text-white hover:bg-[#116d3e] max-[640px]:w-full max-[640px]:justify-center" type="button" onClick={() => setModalOpen(true)}><AdminIcon name="plus" size={17} />Add partner</button>
+            <button className="inline-flex h-[38px] items-center gap-[7px] rounded-lg bg-[#18834b] px-[13px] text-[10px] font-bold text-white hover:bg-[#116d3e] max-[640px]:w-full max-[640px]:justify-center" type="button" onClick={() => { setEditingPartner(null); setModalOpen(true); }}><AdminIcon name="plus" size={17} />Add partner</button>
           </div>
+          {error && <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[9px] text-red-700" role="alert"><span>{error}</span><button className="font-bold underline" type="button" onClick={() => void reload()}>Retry</button></div>}
 
           <section className="mb-[17px] grid grid-cols-4 gap-[13px] max-[980px]:grid-cols-2 max-[640px]:gap-2" aria-label="Delivery partner summary">
             <article className="grid min-h-[91px] grid-cols-[37px_1fr] grid-rows-2 content-center gap-x-[11px] rounded-[10px] border border-[#edf0ee] bg-white p-3.5 max-[640px]:min-h-[80px] max-[640px]:gap-x-2 max-[640px]:p-2.5"><span className="row-span-2 grid size-9 place-items-center self-center rounded-[9px] bg-[#eaf2fb] text-[#4b81bc]"><AdminIcon name="customers" /></span><div className="flex items-baseline justify-between gap-2"><span className="text-[9px] text-[#78837c] max-[640px]:text-[8px]">Total partners</span><strong className="text-xl font-bold max-[640px]:text-[17px]">{partners.length}</strong></div><small className="self-end text-[8px] text-[#9aa39d]">In your demo roster</small></article>
@@ -127,7 +151,7 @@ export default function DeliveryPartnersPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[850px] border-collapse text-left">
-                <thead className="bg-[#f8f9f8] text-[8px] font-bold tracking-[0.5px] text-[#929c95]"><tr>{["PARTNER", "SERVICE AREA", "VEHICLE", "DELIVERIES", "RATING", "STATUS", "AVAILABILITY"].map((heading) => <th className="px-2.5 py-3 first:pl-[17px] last:pr-[17px]" key={heading}>{heading}</th>)}</tr></thead>
+                <thead className="bg-[#f8f9f8] text-[8px] font-bold tracking-[0.5px] text-[#929c95]"><tr>{["PARTNER", "SERVICE AREA", "VEHICLE", "DELIVERIES", "RATING", "STATUS", "AVAILABILITY", "ACTIONS"].map((heading) => <th className="px-2.5 py-3 first:pl-[17px] last:pr-[17px]" key={heading}>{heading}</th>)}</tr></thead>
                 <tbody>
                   {visiblePartners.map((partner) => <tr className="border-b border-[#f0f2f0] last:border-0" key={partner.id}>
                     <td className="px-2.5 py-[9px] pl-[17px]"><div className="flex min-w-[190px] items-center gap-[9px]"><span className="grid size-[36px] shrink-0 place-items-center rounded-full bg-[#eaf2fb] text-[9px] font-bold text-[#4b81bc]">{partner.initials}</span><span className="flex flex-col gap-1"><strong className="text-[9px] font-bold text-[#354139]">{partner.name}</strong><small className="text-[8px] text-[#99a29c]">{partner.phone} · Joined {partner.joined}</small></span></div></td>
@@ -137,17 +161,19 @@ export default function DeliveryPartnersPage() {
                     <td className="px-2.5 text-[9px] text-[#59655e]">{partner.rating === null ? <span className="text-[#a4aca7]">New partner</span> : <span className="inline-flex items-center gap-1"><span className="text-[#dfa847]">★</span>{partner.rating.toFixed(1)}</span>}</td>
                     <td className="px-2.5"><span className={`inline-flex whitespace-nowrap rounded-full px-[7px] py-[5px] text-[8px] font-semibold ${statusStyles(partner.status)}`}>{partner.status}</span></td>
                     <td className="px-2.5 pr-[17px]"><button className={`relative h-[22px] w-[38px] rounded-full transition ${partner.status === "Available" ? "bg-[#18834b]" : "bg-[#cbd3ce]"} disabled:cursor-not-allowed disabled:opacity-50`} type="button" onClick={() => toggleAvailability(partner.id)} disabled={!["Available", "Offline"].includes(partner.status)} aria-label={`Set ${partner.name} ${partner.status === "Available" ? "offline" : "available"}`} aria-pressed={partner.status === "Available"} title={partner.status === "On delivery" ? "Availability cannot be changed during an active delivery" : partner.status === "Pending review" ? "Approve onboarding before making this partner available" : "Toggle partner availability"}><span className={`absolute top-[3px] size-4 rounded-full bg-white shadow-sm transition-all ${partner.status === "Available" ? "left-[19px]" : "left-[3px]"}`} /></button></td>
+                    <td className="px-2.5 pr-[17px]"><div className="flex gap-1"><button className="h-[29px] rounded-md border border-[#e5ebe7] px-2 text-[8px] font-bold text-[#217847]" type="button" onClick={() => { setEditingPartner(partner); setModalOpen(true); }}>Edit</button><button className="h-[29px] rounded-md border border-[#f0d8d4] px-2 text-[8px] font-bold text-[#bf5c50]" type="button" onClick={async () => { if (!window.confirm(`Delete delivery partner ${partner.name}? Existing orders will retain the partner name.`)) return; try { await deletePartner(partner.id); setNotice("Delivery partner deleted."); } catch (deleteError) { setNotice(deleteError instanceof Error ? deleteError.message : "Unable to delete partner."); } }}>Delete</button></div></td>
                   </tr>)}
-                  {visiblePartners.length === 0 && <tr><td className="h-[210px] text-center" colSpan={7}><AdminIcon name="search" size={22} /><strong className="my-2 block text-[11px] text-[#39453e]">No partners found</strong><small className="text-[9px] text-[#89948d]">Try another search or choose a different status.</small><button className="mt-2 block w-full border-0 bg-transparent text-[9px] font-bold text-[#217847]" type="button" onClick={() => { setSearch(""); setActiveFilter("All partners"); }}>Clear filters</button></td></tr>}
+                  {loading && <tr><td className="h-[70px] text-center text-[9px] text-[#89948d]" colSpan={8}>Loading delivery partners…</td></tr>}
+                  {!loading && visiblePartners.length === 0 && <tr><td className="h-[210px] text-center" colSpan={8}><AdminIcon name="search" size={22} /><strong className="my-2 block text-[11px] text-[#39453e]">No partners found</strong><small className="text-[9px] text-[#89948d]">Try another search or choose a different status.</small><button className="mt-2 block w-full border-0 bg-transparent text-[9px] font-bold text-[#217847]" type="button" onClick={() => { setSearch(""); setActiveFilter("All partners"); }}>Clear filters</button></td></tr>}
                 </tbody>
               </table>
             </div>
           </section>
-          <p className="ml-px mt-3 text-[9px] text-[#9ca69f]">Demo partner roster · Changes persist in this browser&apos;s local storage, not a shared backend. Real onboarding and document verification will be added with the backend.</p>
+          <p className="ml-px mt-3 text-[9px] text-[#9ca69f]">Partner profiles and availability are saved to the shared backend. Document verification is not included.</p>
         </div>
       </main>
       {notice && <div className="fixed bottom-5 right-5 z-40 rounded-lg bg-[#1d3325] px-4 py-3 text-[10px] font-semibold text-white shadow-lg max-[640px]:bottom-3 max-[640px]:left-3 max-[640px]:right-3" role="status">{notice}</div>}
-      {modalOpen && <PartnerModal onClose={() => setModalOpen(false)} onSave={savePartner} />}
+      {modalOpen && <PartnerModal partner={editingPartner} onClose={() => { setModalOpen(false); setEditingPartner(null); }} onSave={savePartner} />}
     </div>
   );
 }
