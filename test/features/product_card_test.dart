@@ -42,4 +42,32 @@ void main() {
 
     expect(find.text('1'), findsOneWidget);
   });
+
+  testWidgets('compact ProductCard fits without layout overflow', (
+    tester,
+  ) async {
+    const product = HomeProduct(
+      id: 'p-201',
+      name: 'Fresh Red Apples',
+      packSize: '4 pieces',
+      imageUrl: '',
+      sellingPrice: 120,
+      mrp: 150,
+      discountPercent: 20,
+      isFavourite: false,
+      stock: 5,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(child: ProductCard(product: product, compact: true)),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+  });
 }

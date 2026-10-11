@@ -1,8 +1,11 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 const _apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'https://groceryapp-mvwz.vercel.app/api',
+  defaultValue: kIsWeb
+      ? 'http://localhost:4000/api'
+      : 'https://groceryapp-mvwz.vercel.app/api',
 );
 
 class ApiClient {

@@ -483,14 +483,19 @@ class _RazorpayMethodTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
-      child: const ListTile(
-        leading: Icon(Icons.account_balance_wallet_outlined),
-        title: Text(
-          'Pay via Razorpay',
-          style: TextStyle(fontWeight: FontWeight.w700),
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: const ListTile(
+          leading: Icon(Icons.account_balance_wallet_outlined),
+          title: Text(
+            'Pay via Razorpay',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text('UPI / Cards / Wallets'),
+          trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16),
         ),
-        subtitle: Text('UPI / Cards / Wallets'),
-        trailing: Icon(Icons.arrow_forward_ios_rounded, size: 16),
       ),
     );
   }

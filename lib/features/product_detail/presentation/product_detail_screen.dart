@@ -45,7 +45,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         title: Text(
-          detailState.value?.product.name ?? 'Product',
+          'Product Details',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
@@ -429,7 +429,7 @@ class _ProductGallery extends StatelessWidget {
             itemCount: images.length,
             onPageChanged: onPageChanged,
             itemBuilder: (context, index) => ColoredBox(
-              color: AppColors.surfaceVariant,
+              color: AppColors.mint,
               child: CatalogProductImage(
                 image: images[index],
                 emojiFontSize: 120,

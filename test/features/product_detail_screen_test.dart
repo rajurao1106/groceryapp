@@ -57,7 +57,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Fresh Apples'), findsNWidgets(2));
+    expect(find.text('Product Details'), findsOneWidget);
+    expect(find.text('Fresh Apples'), findsOneWidget);
     expect(find.text('Delivery in 10 mins'), findsOneWidget);
     expect(find.text('ADD  ·  ₹100'), findsOneWidget);
 

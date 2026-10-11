@@ -157,28 +157,10 @@ class _HomePlaceholderScreenState extends ConsumerState<HomePlaceholderScreen> {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
-              sliver: SliverGrid(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final item = page.categories[index];
-                  return GestureDetector(
-                    onTap: () => context.go('/categories?category=${item.id}'),
-                    child: _CategoryTile(category: item),
-                  );
-                }, childCount: page.categories.length),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 0.76,
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 0, 0),
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
               sliver: SliverToBoxAdapter(
                 child: SizedBox(
-                  height: 180,
+                  height: 128,
                   child: PageView.builder(
                     controller: _bannerController,
                     itemCount: page.banners.length,
@@ -187,7 +169,7 @@ class _HomePlaceholderScreenState extends ConsumerState<HomePlaceholderScreen> {
                       return Padding(
                         padding: const EdgeInsets.only(right: 16),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius: BorderRadius.circular(20),
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
@@ -252,7 +234,7 @@ class _HomePlaceholderScreenState extends ConsumerState<HomePlaceholderScreen> {
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               sliver: SliverToBoxAdapter(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -266,8 +248,8 @@ class _HomePlaceholderScreenState extends ConsumerState<HomePlaceholderScreen> {
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: active ? 18 : 8,
-                      height: 8,
+                      width: active ? 16 : 6,
+                      height: 6,
                       decoration: BoxDecoration(
                         color: active
                             ? AppColors.primaryGreen
@@ -281,51 +263,65 @@ class _HomePlaceholderScreenState extends ConsumerState<HomePlaceholderScreen> {
             ),
           ];
 
+          if (page.categories.isNotEmpty) {
+            slivers.add(
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+                sliver: SliverGrid(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final item = page.categories[index];
+                    return GestureDetector(
+                      onTap: () =>
+                          context.go('/categories?category=${item.id}'),
+                      child: _CategoryTile(category: item),
+                    );
+                  }, childCount: page.categories.length),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 8,
+                    mainAxisExtent: 82,
+                  ),
+                ),
+              ),
+            );
+          }
+
           for (final section in page.sections) {
             slivers.add(
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                 sliver: SliverToBoxAdapter(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryGreen.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                section.title,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
-                                ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              section.title,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                section.subtitle,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              section.subtitle,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textSecondary,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text('See all'),
-                        ),
-                      ],
-                    ),
+                      ),
+                      TextButton(
+                        onPressed: () {},
+                        child: const Text('See all'),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -333,10 +329,10 @@ class _HomePlaceholderScreenState extends ConsumerState<HomePlaceholderScreen> {
 
             slivers.add(
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 0, 0),
+                padding: const EdgeInsets.fromLTRB(16, 10, 0, 0),
                 sliver: SliverToBoxAdapter(
                   child: SizedBox(
-                    height: 220,
+                    height: 208,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: section.products.length,
@@ -344,18 +340,16 @@ class _HomePlaceholderScreenState extends ConsumerState<HomePlaceholderScreen> {
                           const SizedBox(width: 12),
                       itemBuilder: (context, index) {
                         final product = section.products[index];
-                        return SizedBox(
-                          width: 170,
-                          child: ProductCard(
-                            product: product,
-                            onTap: () => context.push('/product/${product.id}'),
-                            isFavourite: wishlistIds.contains(product.id),
-                            onFavouriteTap: () async {
-                              await ref
-                                  .read(wishlistControllerProvider.notifier)
-                                  .toggle(product.id);
-                            },
-                          ),
+                        return ProductCard(
+                          product: product,
+                          compact: true,
+                          onTap: () => context.push('/product/${product.id}'),
+                          isFavourite: wishlistIds.contains(product.id),
+                          onFavouriteTap: () async {
+                            await ref
+                                .read(wishlistControllerProvider.notifier)
+                                .toggle(product.id);
+                          },
                         );
                       },
                     ),
@@ -485,17 +479,17 @@ class _CategoryTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           child: CachedNetworkImage(
             imageUrl: category.imageUrl,
-            height: 62,
-            width: 62,
+            height: 44,
+            width: 44,
             fit: BoxFit.cover,
             placeholder: (context, url) => Container(
-              height: 62,
-              width: 62,
+              height: 44,
+              width: 44,
               color: AppColors.surfaceVariant,
             ),
             errorWidget: (context, url, error) => Container(
-              height: 62,
-              width: 62,
+              height: 44,
+              width: 44,
               color: AppColors.surfaceVariant,
               child: const Icon(Icons.image_not_supported_rounded),
             ),

@@ -14,6 +14,7 @@ class ProductCard extends ConsumerWidget {
     this.onFavouriteTap,
     this.onAddTap,
     this.onTap,
+    this.compact = false,
   });
 
   final HomeProduct product;
@@ -21,6 +22,7 @@ class ProductCard extends ConsumerWidget {
   final VoidCallback? onFavouriteTap;
   final VoidCallback? onAddTap;
   final VoidCallback? onTap;
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,11 +50,11 @@ class ProductCard extends ConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 180,
-        padding: const EdgeInsets.all(10),
+        width: compact ? 110 : 180,
+        padding: EdgeInsets.all(compact ? 8 : 10),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(compact ? 16 : 18),
           border: Border.all(color: AppColors.border),
         ),
         child: Column(
@@ -63,7 +65,7 @@ class ProductCard extends ConsumerWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(14),
                   child: SizedBox(
-                    height: 112,
+                    height: compact ? 66 : 84,
                     width: double.infinity,
                     child: CatalogProductImage(
                       image: product.imageUrl,
@@ -131,23 +133,29 @@ class ProductCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: compact ? 7 : 10),
             Text(
               product.name,
-              maxLines: 2,
+              maxLines: compact ? 1 : 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ).textTheme.titleSmall?.copyWith(
+                fontSize: compact ? 12 : null,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: compact ? 2 : 4),
             Text(
               product.packSize,
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              ).textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+                fontSize: compact ? 10 : null,
+              ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: compact ? 5 : 10),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -158,6 +166,7 @@ class ProductCard extends ConsumerWidget {
                     child: Text(
                       priceText,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontSize: compact ? 13 : null,
                         fontWeight: FontWeight.w800,
                         color: AppColors.primaryGreen,
                       ),
@@ -172,6 +181,7 @@ class ProductCard extends ConsumerWidget {
                     child: Text(
                       mrpText,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: compact ? 9 : null,
                         color: AppColors.textMuted,
                         decoration: TextDecoration.lineThrough,
                       ),
@@ -180,117 +190,210 @@ class ProductCard extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryGreen.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '${product.discountPercent}% OFF',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColors.primaryGreen,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                if (isOutOfStock)
-                  Text(
-                    'Unavailable',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  )
-                else if (quantity > 0)
-                  Container(
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          style: IconButton.styleFrom(
-                            minimumSize: const Size(20, 20),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 20,
-                            minHeight: 20,
-                          ),
-                          onPressed: () async {
-                            await ref
-                                .read(cartControllerProvider.notifier)
-                                .decrease(product.id);
-                          },
-                          icon: const Icon(Icons.remove, size: 16),
-                          color: AppColors.primaryGreen,
-                        ),
-                        Text(
-                          quantity.toString(),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          style: IconButton.styleFrom(
-                            minimumSize: const Size(20, 20),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 20,
-                            minHeight: 20,
-                          ),
-                          onPressed: () async {
-                            await ref
-                                .read(cartControllerProvider.notifier)
-                                .increase(product.id);
-                          },
-                          icon: const Icon(Icons.add, size: 16),
-                          color: AppColors.primaryGreen,
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  SizedBox(
-                    height: 34,
-                    child: FilledButton(
-                      onPressed: handleAdd,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.primaryGreen,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
+            SizedBox(height: compact ? 5 : 8),
+            if (compact)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${product.discountPercent}% OFF',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: AppColors.primaryGreen,
+                        fontWeight: FontWeight.w800,
                       ),
-                      child: const Text('ADD'),
                     ),
                   ),
-              ],
-            ),
+                  if (isOutOfStock)
+                    const Icon(Icons.remove_shopping_cart_outlined, size: 16)
+                  else if (quantity > 0)
+                    _CompactQuantityControl(
+                      quantity: quantity,
+                      onDecrease: () => ref
+                          .read(cartControllerProvider.notifier)
+                          .decrease(product.id),
+                      onIncrease: () => ref
+                          .read(cartControllerProvider.notifier)
+                          .increase(product.id),
+                    )
+                  else
+                    SizedBox(
+                      width: 30,
+                      height: 28,
+                      child: FilledButton(
+                        onPressed: handleAdd,
+                        style: FilledButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                        ),
+                        child: const Icon(Icons.add_rounded, size: 18),
+                      ),
+                    ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreen.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${product.discountPercent}% OFF',
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppColors.primaryGreen,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (isOutOfStock)
+                    const Text(
+                      'Unavailable',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    )
+                  else if (quantity > 0)
+                    Container(
+                      height: 34,
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size(20, 20),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 20,
+                              minHeight: 20,
+                            ),
+                            onPressed: () async {
+                              await ref
+                                  .read(cartControllerProvider.notifier)
+                                  .decrease(product.id);
+                            },
+                            icon: const Icon(Icons.remove, size: 16),
+                            color: AppColors.primaryGreen,
+                          ),
+                          Text(
+                            quantity.toString(),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            style: IconButton.styleFrom(
+                              minimumSize: const Size(20, 20),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 20,
+                              minHeight: 20,
+                            ),
+                            onPressed: () async {
+                              await ref
+                                  .read(cartControllerProvider.notifier)
+                                  .increase(product.id);
+                            },
+                            icon: const Icon(Icons.add, size: 16),
+                            color: AppColors.primaryGreen,
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 34,
+                      child: FilledButton(
+                        onPressed: handleAdd,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primaryGreen,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                        ),
+                        child: const Text('ADD'),
+                      ),
+                    ),
+                ],
+              ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CompactQuantityControl extends StatelessWidget {
+  const _CompactQuantityControl({
+    required this.quantity,
+    required this.onDecrease,
+    required this.onIncrease,
+  });
+
+  final int quantity;
+  final Future<void> Function() onDecrease;
+  final Future<void> Function() onIncrease;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _QuantityButton(icon: Icons.remove, onPressed: onDecrease),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: Text(
+            quantity.toString(),
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+          ),
+        ),
+        _QuantityButton(icon: Icons.add, onPressed: onIncrease),
+      ],
+    );
+  }
+}
+
+class _QuantityButton extends StatelessWidget {
+  const _QuantityButton({required this.icon, required this.onPressed});
+
+  final IconData icon;
+  final Future<void> Function() onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkResponse(
+      onTap: onPressed,
+      radius: 14,
+      child: Icon(icon, size: 15, color: AppColors.primaryGreen),
     );
   }
 }

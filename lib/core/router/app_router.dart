@@ -119,10 +119,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: '/profile',
-        builder: (context, state) => const ProfilePlaceholderScreen(),
-      ),
-      GoRoute(
         path: '/profile/edit',
         builder: (context, state) => const EditProfileScreen(),
       ),
@@ -143,10 +139,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
-        path: '/orders',
-        builder: (context, state) => const OrdersPlaceholderScreen(),
-      ),
-      GoRoute(
         path: '/orders/:orderId',
         builder: (context, state) {
           final orderId = state.pathParameters['orderId'] ?? '';
@@ -156,6 +148,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => AuthGate(child: child),
         routes: [
+          GoRoute(
+            path: '/wishlist',
+            builder: (context, state) => const WishlistPlaceholderScreen(),
+          ),
           StatefulShellRoute.indexedStack(
             builder: (context, state, navigationShell) =>
                 AppShell(navigationShell: navigationShell),
@@ -192,9 +188,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               StatefulShellBranch(
                 routes: [
                   GoRoute(
-                    path: '/wishlist',
+                    path: '/orders',
                     builder: (context, state) =>
-                        const WishlistPlaceholderScreen(),
+                        const OrdersPlaceholderScreen(),
+                  ),
+                ],
+              ),
+              StatefulShellBranch(
+                routes: [
+                  GoRoute(
+                    path: '/profile',
+                    builder: (context, state) =>
+                        const ProfilePlaceholderScreen(),
                   ),
                 ],
               ),

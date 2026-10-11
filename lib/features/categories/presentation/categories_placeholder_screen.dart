@@ -215,7 +215,9 @@ class _CategoriesPlaceholderScreenState
         final groups = snapshot.data!;
         if (groups.isEmpty) {
           return const Scaffold(
-            body: Center(child: Text('No product categories are available yet.')),
+            body: Center(
+              child: Text('No product categories are available yet.'),
+            ),
           );
         }
         final selectedGroup = groups.firstWhere(
@@ -230,259 +232,268 @@ class _CategoriesPlaceholderScreenState
             elevation: 0,
             title: const Text('Categories'),
           ),
-          body: Row(
-            children: [
-              Container(
-                width: 112,
-                color: AppColors.surface,
-                child: ListView.builder(
-                  itemCount: groups.length,
-                  itemBuilder: (context, index) {
-                    final group = groups[index];
-                    final selected = group.id == selectedGroup.id;
-                    return InkWell(
-                      onTap: () => _selectCategory(group.id),
-                      child: Container(
-                        margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                          horizontal: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.primaryGreen
-                              : AppColors.background,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              group.icon,
-                              color: selected
-                                  ? Colors.white
-                                  : AppColors.textPrimary,
-                              size: 24,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              group.name,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: selected
-                                    ? Colors.white
-                                    : AppColors.textPrimary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+          body: RefreshIndicator(
+            onRefresh: () => _refreshCategory(),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              children: [
+                const Text(
+                  'Shop by category',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                 ),
-              ),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () => _refreshCategory(),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                    children: [
-                      const Text(
-                        'Sub-categories',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                const SizedBox(height: 12),
+                for (final group in groups)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: InkWell(
+                      onTap: () => _selectCategory(group.id),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: group.id == selectedGroup.id
+                              ? AppColors.mint
+                              : AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: group.id == selectedGroup.id
+                                ? AppColors.primaryGreen.withValues(alpha: 0.4)
+                                : AppColors.border,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      if (_subcategories.isNotEmpty)
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                        child: Row(
                           children: [
-                            ChoiceChip(
-                              label: const Text('All'),
-                              selected: _selectedSubcategory.isEmpty,
-                              onSelected: (_) {
-                                setState(() => _selectedSubcategory = '');
-                                _refreshCategory();
-                              },
-                            ),
-                            ..._subcategories.map(
-                              (subcategory) => ChoiceChip(
-                                label: Text(subcategory),
-                                selected: _selectedSubcategory == subcategory,
-                                onSelected: (_) {
-                                  setState(
-                                    () => _selectedSubcategory = subcategory,
-                                  );
-                                  _refreshCategory();
-                                },
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceVariant,
+                                borderRadius: BorderRadius.circular(13),
                               ),
+                              child: Icon(
+                                group.icon,
+                                color: AppColors.primaryGreen,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    group.name,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  const Text(
+                                    'Fresh picks and daily essentials',
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: AppColors.textSecondary,
                             ),
                           ],
-                        )
-                      else
-                        const SizedBox.shrink(),
-                      const SizedBox(height: 18),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          ChoiceChip(
-                            label: const Text('Brand: All'),
-                            selected: _selectedBrand.isEmpty,
-                            onSelected: (_) {
-                              setState(() => _selectedBrand = '');
-                              _refreshCategory();
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('Fresh Basket'),
-                            selected: _selectedBrand == 'Fresh Basket',
-                            onSelected: (_) {
-                              setState(() => _selectedBrand = 'Fresh Basket');
-                              _refreshCategory();
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('Nature Box'),
-                            selected: _selectedBrand == 'Nature Box',
-                            onSelected: (_) {
-                              setState(() => _selectedBrand = 'Nature Box');
-                              _refreshCategory();
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('Under ₹100'),
-                            selected: _selectedPrice == 'under_100',
-                            onSelected: (_) {
-                              setState(() => _selectedPrice = 'under_100');
-                              _refreshCategory();
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('₹100-₹200'),
-                            selected: _selectedPrice == '100_200',
-                            onSelected: (_) {
-                              setState(() => _selectedPrice = '100_200');
-                              _refreshCategory();
-                            },
-                          ),
-                          ChoiceChip(
-                            label: const Text('10%+ off'),
-                            selected: _selectedDiscount == '10_plus',
-                            onSelected: (_) {
-                              setState(() => _selectedDiscount = '10_plus');
-                              _refreshCategory();
-                            },
-                          ),
-                        ],
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          const Text(
-                            'Products',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const Spacer(),
-                          TextButton.icon(
-                            onPressed: _showSortSheet,
-                            icon: const Icon(Icons.sort_rounded),
-                            label: const Text('Sort'),
-                          ),
-                        ],
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Sub-categories',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 10),
+                if (_subcategories.isNotEmpty)
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('All'),
+                        selected: _selectedSubcategory.isEmpty,
+                        onSelected: (_) {
+                          setState(() => _selectedSubcategory = '');
+                          _refreshCategory();
+                        },
                       ),
-                      const SizedBox(height: 12),
-                      if (_categoryError != null)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 40),
-                            child: Column(
-                              children: [
-                                Text(
-                                  _categoryError!,
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () => _refreshCategory(),
-                                  child: const Text('Retry'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else if (_products.isEmpty)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 40),
-                            child: Text(
-                              'No products found',
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: EdgeInsets.zero,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                childAspectRatio: 0.76,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                              ),
-                          itemCount: _products.length + (_hasMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == _products.length) {
-                              return Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: _loadingMore
-                                      ? const CircularProgressIndicator(
-                                          color: AppColors.primaryGreen,
-                                        )
-                                      : FilledButton(
-                                          onPressed: _loadMore,
-                                          child: const Text('Load more'),
-                                        ),
-                                ),
-                              );
-                            }
-
-                            final product = _products[index];
-                            return ProductCard(
-                              product: product,
-                              onTap: () =>
-                                  context.push('/product/${product.id}'),
-                              isFavourite: wishlistIds.contains(product.id),
-                              onFavouriteTap: () async {
-                                await ref
-                                    .read(wishlistControllerProvider.notifier)
-                                    .toggle(product.id);
-                              },
-                            );
+                      ..._subcategories.map(
+                        (subcategory) => ChoiceChip(
+                          label: Text(subcategory),
+                          selected: _selectedSubcategory == subcategory,
+                          onSelected: (_) {
+                            setState(() => _selectedSubcategory = subcategory);
+                            _refreshCategory();
                           },
                         ),
+                      ),
                     ],
-                  ),
+                  )
+                else
+                  const SizedBox.shrink(),
+                const SizedBox(height: 18),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Brand: All'),
+                      selected: _selectedBrand.isEmpty,
+                      onSelected: (_) {
+                        setState(() => _selectedBrand = '');
+                        _refreshCategory();
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('Fresh Basket'),
+                      selected: _selectedBrand == 'Fresh Basket',
+                      onSelected: (_) {
+                        setState(() => _selectedBrand = 'Fresh Basket');
+                        _refreshCategory();
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('Nature Box'),
+                      selected: _selectedBrand == 'Nature Box',
+                      onSelected: (_) {
+                        setState(() => _selectedBrand = 'Nature Box');
+                        _refreshCategory();
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('Under ₹100'),
+                      selected: _selectedPrice == 'under_100',
+                      onSelected: (_) {
+                        setState(() => _selectedPrice = 'under_100');
+                        _refreshCategory();
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('₹100-₹200'),
+                      selected: _selectedPrice == '100_200',
+                      onSelected: (_) {
+                        setState(() => _selectedPrice = '100_200');
+                        _refreshCategory();
+                      },
+                    ),
+                    ChoiceChip(
+                      label: const Text('10%+ off'),
+                      selected: _selectedDiscount == '10_plus',
+                      onSelected: (_) {
+                        setState(() => _selectedDiscount = '10_plus');
+                        _refreshCategory();
+                      },
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text(
+                      'Products',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: _showSortSheet,
+                      icon: const Icon(Icons.sort_rounded),
+                      label: const Text('Sort'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (_categoryError != null)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Column(
+                        children: [
+                          Text(
+                            _categoryError!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => _refreshCategory(),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (_products.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Text(
+                        'No products found',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.66,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                    itemCount: _products.length + (_hasMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == _products.length) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: _loadingMore
+                                ? const CircularProgressIndicator(
+                                    color: AppColors.primaryGreen,
+                                  )
+                                : FilledButton(
+                                    onPressed: _loadMore,
+                                    child: const Text('Load more'),
+                                  ),
+                          ),
+                        );
+                      }
+
+                      final product = _products[index];
+                      return ProductCard(
+                        product: product,
+                        onTap: () => context.push('/product/${product.id}'),
+                        isFavourite: wishlistIds.contains(product.id),
+                        onFavouriteTap: () async {
+                          await ref
+                              .read(wishlistControllerProvider.notifier)
+                              .toggle(product.id);
+                        },
+                      );
+                    },
+                  ),
+              ],
+            ),
           ),
         );
       },

@@ -29,32 +29,40 @@ class BillDetailsCard extends StatelessWidget {
               'Bill details',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
-            ExpansionTile(
-              key: const PageStorageKey<String>('bill-breakdown'),
-              tilePadding: EdgeInsets.zero,
-              childrenPadding: const EdgeInsets.only(bottom: 12),
-              title: _BillRow(
-                label: 'To Pay',
-                amount: bill.toPay,
-                isTotal: true,
-              ),
-              subtitle: const Text('View breakdown'),
-              children: [
-                _BillRow(label: 'Item Total', amount: bill.itemTotal),
-                _BillRow(label: 'Handling Fee', amount: bill.handlingFee),
-                if (bill.smallCartFee > 0)
-                  _BillRow(label: 'Small Cart Fee', amount: bill.smallCartFee),
-                _BillRow(label: 'Delivery Fee', amount: bill.deliveryFee),
-                _BillRow(
-                  label: 'GST and Other Charges',
-                  amount: bill.gstAndOtherCharges,
+            Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              clipBehavior: Clip.antiAlias,
+              child: ExpansionTile(
+                key: const PageStorageKey<String>('bill-breakdown'),
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(bottom: 12),
+                title: _BillRow(
+                  label: 'To Pay',
+                  amount: bill.toPay,
+                  isTotal: true,
                 ),
-                if (showDeliveryTip)
+                subtitle: const Text('View breakdown'),
+                children: [
+                  _BillRow(label: 'Item Total', amount: bill.itemTotal),
+                  _BillRow(label: 'Handling Fee', amount: bill.handlingFee),
+                  if (bill.smallCartFee > 0)
+                    _BillRow(
+                      label: 'Small Cart Fee',
+                      amount: bill.smallCartFee,
+                    ),
+                  _BillRow(label: 'Delivery Fee', amount: bill.deliveryFee),
                   _BillRow(
-                    label: 'Delivery Partner Tip',
-                    amount: bill.deliveryPartnerTip,
+                    label: 'GST and Other Charges',
+                    amount: bill.gstAndOtherCharges,
                   ),
-              ],
+                  if (showDeliveryTip)
+                    _BillRow(
+                      label: 'Delivery Partner Tip',
+                      amount: bill.deliveryPartnerTip,
+                    ),
+                ],
+              ),
             ),
           ],
         ),

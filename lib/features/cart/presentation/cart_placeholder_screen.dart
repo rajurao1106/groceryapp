@@ -15,6 +15,7 @@ class CartPlaceholderScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartControllerProvider);
     final bill = ref.watch(billRepositoryProvider).calculateBill(cart);
+    final itemCount = cart.fold<int>(0, (total, item) => total + item.quantity);
 
     if (cart.isEmpty) {
       return Scaffold(
@@ -22,7 +23,7 @@ class CartPlaceholderScreen extends ConsumerWidget {
         appBar: AppBar(
           backgroundColor: AppColors.background,
           elevation: 0,
-          title: const Text('Cart'),
+          title: const Text('My Cart'),
         ),
         body: Center(
           child: Padding(
@@ -70,7 +71,22 @@ class CartPlaceholderScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('Cart'),
+        title: const Text('My Cart'),
+        actions: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(
+                '$itemCount items',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
