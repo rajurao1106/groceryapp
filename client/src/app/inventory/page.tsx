@@ -2,7 +2,11 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { AdminIcon, AdminSidebar, AdminTopbar } from "@/components/admin-chrome";
-import { useProductCatalog, type Product } from "@/components/product-catalog-provider";
+import { AdminLoginGate } from "@/components/admin-login-gate";
+import {
+  useProductCatalog,
+  type Product,
+} from "@/components/product-catalog-provider";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 
 type StockFilter = "All stock" | "Low stock" | "Out of stock" | "Expiring soon";
@@ -83,7 +87,7 @@ function StockBadge({ available }: { available: number }) {
   return <span className={`inline-flex whitespace-nowrap rounded-full px-[7px] py-[5px] text-[8px] font-semibold ${tone}`}>{label}</span>;
 }
 
-export default function InventoryPage() {
+function InventoryContent() {
   const { products, adjustStock } = useProductCatalog();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All categories");
@@ -451,5 +455,14 @@ export default function InventoryPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function InventoryPage() {
+  const { reload } = useProductCatalog();
+  return (
+    <AdminLoginGate onSessionChange={reload}>
+      <InventoryContent />
+    </AdminLoginGate>
   );
 }

@@ -32,6 +32,7 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/node_modules/
 
 # Client app secrets, dependencies, and generated files
 /client/node_modules/

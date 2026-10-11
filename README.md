@@ -33,6 +33,15 @@ This project includes `google_maps_flutter` for the location-confirmation flow. 
 - `flutter run`
 - `flutter analyze`
 
+## Run the full app locally
+
+After installing the server and client dependencies, install the root
+development dependency once with `npm install` from the project root. Then run
+`npm run dev` from the root to start the backend, Next.js client, and Flutter
+app in Chrome together. Stop the processes with `Ctrl+C`. To use another
+Flutter target, change `-d chrome` in the root `package.json` dev script to
+that device's ID (for example, `windows`).
+
 ## Razorpay test Key ID for Flutter
 
 The Flutter app reads the public Razorpay test Key ID from the project-root
@@ -80,12 +89,23 @@ existing local-storage demo providers.
    not Firebase.
 4. In `client`, set `NEXT_PUBLIC_API_URL` if the backend is not running at
    `http://localhost:4000/api`, then run `npm install` and `npm run dev`.
+   Production builds default to the deployed API; set this variable to the
+   same public `/api` URL if using a different backend deployment.
    Open `http://localhost:3000/admin/login` and use the username and password
    configured in `server/.env`.
 5. Run Flutter with an API URL appropriate to the device. Android emulator:
    `flutter run --dart-define=API_BASE_URL=http://10.0.2.2:4000/api`.
    For a physical device, use the development computer's LAN IP; for iOS
-   simulator, use `http://127.0.0.1:4000/api`.
+   simulator, use `http://127.0.0.1:4000/api`. Release builds default to the
+   deployed API; pass `--dart-define=API_BASE_URL=https://<your-vercel-domain>/api`
+   when building against another deployment.
+
+Products and inventory stock changes are saved in PostgreSQL and published
+products feed the Flutter catalog from the same API. The app refreshes the
+catalog when returning to the foreground, every 30 seconds while active, and
+when the user pulls to refresh. Admin category filters include categories
+already used by products, and new category names can be entered in the product
+form.
 
 The customer catalog route `GET /api/home` is public and returns published,
 in-stock products. Admin catalog reads and product create/update/delete routes

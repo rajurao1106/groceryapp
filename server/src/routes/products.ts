@@ -66,7 +66,10 @@ async function listProducts() {
 }
 
 export async function productRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/products", { preHandler: requireAdminSession }, async () => ({ products: await listProducts() }));
+  app.get("/products", { preHandler: requireAdminSession }, async (_request, reply) => {
+    reply.header("Cache-Control", "no-store, max-age=0");
+    return { products: await listProducts() };
+  });
 
   app.post("/products/images/signature", { preHandler: requireAdminSession }, async (_request, reply) => {
     try {
@@ -92,7 +95,8 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
-  app.get("/home", async () => {
+  app.get("/home", async (_request, reply) => {
+    reply.header("Cache-Control", "no-store, max-age=0");
     const catalog = await listProducts();
     const visibleProducts = catalog
       .filter((product) => product.status === "Active")

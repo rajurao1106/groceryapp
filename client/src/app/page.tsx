@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AdminIcon, AdminSidebar, AdminTopbar } from "@/components/admin-chrome";
+import { AdminLoginGate } from "@/components/admin-login-gate";
 import { useOrdersDemo, type OrderStatus } from "@/components/orders-demo-provider";
 import { useProductCatalog } from "@/components/product-catalog-provider";
 import { useDeliveryPartnersDemo } from "@/components/delivery-partners-demo-provider";
@@ -25,7 +26,7 @@ const avatarTones = [
   "bg-[#e9f1fa] text-[#527ba9]",
 ];
 
-export default function Home() {
+function DashboardContent() {
   const { orders } = useOrdersDemo();
   const { products } = useProductCatalog();
   const { partners } = useDeliveryPartnersDemo();
@@ -178,5 +179,14 @@ export default function Home() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  const { reload } = useProductCatalog();
+  return (
+    <AdminLoginGate onSessionChange={reload}>
+      <DashboardContent />
+    </AdminLoginGate>
   );
 }

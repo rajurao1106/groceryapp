@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { backendRequest } from "@/lib/backend-api";
 
 export type ProductStatus = "Active" | "Draft" | "Out of stock";
@@ -51,33 +51,10 @@ export function ProductCatalogProvider({ children }: { children: ReactNode }) {
       setProducts(result.products);
       setError("");
     } catch (cause) {
-      setProducts([]);
       setError(cause instanceof Error ? cause.message : "Unable to load products from the backend.");
     } finally {
       setLoading(false);
     }
-  }, [fetchProducts]);
-
-  useEffect(() => {
-    let mounted = true;
-    void fetchProducts()
-      .then((result) => {
-        if (mounted) {
-          setProducts(result.products);
-          setError("");
-        }
-      })
-      .catch((cause: unknown) => {
-        if (mounted) {
-          setError(cause instanceof Error ? cause.message : "Unable to load products from the backend.");
-        }
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
   }, [fetchProducts]);
 
   const saveProduct = useCallback(async (product: ProductInput, id?: number) => {

@@ -1,0 +1,11 @@
+{
+  "name": "grocery-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n server,client,app \"npm --prefix server run dev\" \"npm --prefix client run dev\" \"flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:4000/api\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

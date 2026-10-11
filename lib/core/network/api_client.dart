@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 const _apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
   defaultValue: kIsWeb
-      ? 'http://localhost:4000/api'
+      ? (kReleaseMode
+            ? 'https://groceryapp-mvwz.vercel.app/api'
+            : 'http://localhost:4000/api')
       : 'https://groceryapp-mvwz.vercel.app/api',
 );
 

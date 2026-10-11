@@ -7,7 +7,7 @@ import { useProductCatalog, type Product, type ProductInput, type ProductStatus 
 import { AdminLoginGate } from "@/components/admin-login-gate";
 import { deleteProductImage, uploadProductImage } from "@/lib/cloudinary-upload";
 
-const categories = ["All products", "Fruits", "Vegetables", "Dairy", "Bakery", "Pantry"];
+const defaultCategories = ["Fruits", "Vegetables", "Dairy", "Bakery", "Pantry"];
 const statusFilters = ["All", "Active", "Draft", "Out of stock"] as const;
 
 function formatPrice(value: number) {
@@ -42,8 +42,9 @@ function DeleteProductDialog({ product, onClose, onConfirm }: {
   );
 }
 
-function ProductModal({ product, onClose, onSave }: {
+function ProductModal({ product, categories, onClose, onSave }: {
   product: Product | null;
+  categories: string[];
   onClose: () => void;
   onSave: (event: FormEvent<HTMLFormElement>, image: { file: File | null; remove: boolean }) => Promise<string | null>;
 }) {
@@ -92,7 +93,7 @@ function ProductModal({ product, onClose, onSave }: {
           <div className="grid grid-cols-2 gap-[13px] max-[480px]:grid-cols-1">
             <label className="col-span-2 flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057] max-[480px]:col-span-1"><span>Product name <b className="text-[#cf665a]">*</b></span><input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none placeholder:text-[#aab2ad] focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="name" defaultValue={product?.name ?? ""} placeholder="e.g. Fresh strawberries" required autoFocus /></label>
             <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]"><span>Brand <b className="text-[#cf665a]">*</b></span><input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a] focus:ring-2 focus:ring-[#18834b]/10" name="brand" defaultValue={product?.brand ?? ""} placeholder="Brand name" required /></label>
-            <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]"><span>Category <b className="text-[#cf665a]">*</b></span><select className="h-9 rounded-md border border-[#e4eae6] bg-white px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="category" defaultValue={product?.category ?? "Fruits"}>{categories.slice(1).map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]"><span>Category <b className="text-[#cf665a]">*</b></span><input className="h-9 rounded-md border border-[#e4eae6] bg-white px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="category" list="product-categories" defaultValue={product?.category ?? "Fruits"} placeholder="e.g. Fruits" required /><datalist id="product-categories">{categories.map((item) => <option key={item} value={item} />)}</datalist></label>
             <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]"><span>Pack size / unit <b className="text-[#cf665a]">*</b></span><input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="packSize" defaultValue={product?.packSize ?? ""} placeholder="e.g. 500 g" required /></label>
             <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]"><span>SKU / barcode <b className="text-[#cf665a]">*</b></span><input className="h-9 rounded-md border border-[#e4eae6] px-2.5 font-mono text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="sku" defaultValue={product?.sku ?? ""} placeholder="e.g. FR-BER-001" required /></label>
             <label className="flex min-w-0 flex-col gap-1.5 text-[9px] font-semibold text-[#536057]"><span>Selling price (₹) <b className="text-[#cf665a]">*</b></span><input className="h-9 rounded-md border border-[#e4eae6] px-2.5 text-[10px] font-normal outline-none focus:border-[#8bb99a]" name="price" type="number" min="0" step="0.01" defaultValue={product?.price ?? ""} placeholder="0.00" required /></label>
@@ -151,6 +152,10 @@ function ProductModal({ product, onClose, onSave }: {
 
 export default function ProductsPage() {
   const { products, loading, error, reload, saveProduct: persistProduct, deleteProduct: removeProduct } = useProductCatalog();
+  const categories = useMemo(
+    () => ["All products", ...new Set([...defaultCategories, ...products.map((product) => product.category)])],
+    [products],
+  );
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All products");
   const [status, setStatus] = useState<(typeof statusFilters)[number]>("All");
@@ -301,7 +306,7 @@ export default function ProductsPage() {
           <p className="ml-px mt-3 text-[9px] text-[#9ca69f]">Shared catalog · Changes are stored in PostgreSQL and visible to the customer app.</p>
         </div>
       </main>
-      {modalOpen && <ProductModal product={editingProduct} onClose={() => { setModalOpen(false); setEditingProduct(null); }} onSave={saveProduct} />}
+      {modalOpen && <ProductModal categories={categories.slice(1)} product={editingProduct} onClose={() => { setModalOpen(false); setEditingProduct(null); }} onSave={saveProduct} />}
       {deletingProduct && <DeleteProductDialog product={deletingProduct} onClose={() => setDeletingProduct(null)} onConfirm={deleteProduct} />}
     </div>
     </AdminLoginGate>

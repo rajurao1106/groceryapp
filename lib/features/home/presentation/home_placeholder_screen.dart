@@ -21,17 +21,46 @@ class HomePlaceholderScreen extends ConsumerStatefulWidget {
       _HomePlaceholderScreenState();
 }
 
-class _HomePlaceholderScreenState extends ConsumerState<HomePlaceholderScreen> {
+class _HomePlaceholderScreenState extends ConsumerState<HomePlaceholderScreen>
+    with WidgetsBindingObserver {
   final PageController _bannerController = PageController(
     viewportFraction: 0.96,
   );
   Timer? _bannerTimer;
+  Timer? _catalogRefreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startCatalogRefresh();
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _bannerTimer?.cancel();
+    _catalogRefreshTimer?.cancel();
     _bannerController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(homePageProvider);
+      _startCatalogRefresh();
+    } else {
+      _catalogRefreshTimer?.cancel();
+      _catalogRefreshTimer = null;
+    }
+  }
+
+  void _startCatalogRefresh() {
+    _catalogRefreshTimer?.cancel();
+    _catalogRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) ref.invalidate(homePageProvider);
+    });
   }
 
   void _startAutoScrollIfNeeded(List<HomeBanner> banners) {
