@@ -13,6 +13,7 @@
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/db/seed.ts",
     "db:auth-schema": "tsx src/scripts/create-admin-auth-tables.ts",
+    "db:admin-crud-schema": "tsx src/scripts/create-admin-crud-tables.ts",
     "auth:seed-admin": "tsx src/scripts/seed-admin.ts",
     "auth:grant-admin": "tsx src/scripts/grant-admin.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"

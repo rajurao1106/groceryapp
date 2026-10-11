@@ -70,24 +70,23 @@ and stock management use the shared backend.
 2. In `server`, copy `.env.example` to `.env` and replace the
    `DATABASE_URL`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD` placeholders with
    your own values. Use a unique password with at least 12 characters.
-   Run `npm install`. For a brand-new database run `npm run db:push`. If your
-   existing database already has the catalog tables and `db:push` fails while
-   altering an existing primary key, do not keep retrying it; run
-   `npm run db:auth-schema` instead. This command only adds the admin auth
-   tables and does not alter existing catalog data. Then run
-   `npm run db:seed` and `npm run auth:seed-admin` before `npm run dev`.
+   Run `npm install`. For a brand-new database run `npm run db:push`, then
+   `npm run db:seed`, `npm run db:auth-schema`, and
+   `npm run auth:seed-admin` before `npm run dev`. For an existing catalog
+   database, do not use `db:push` for these new admin tables. Run
+   `npm run db:auth-schema` if admin login tables are not present, then
+   `npm run db:admin-crud-schema`. These two commands only create the relevant
+   admin tables and do not seed or alter product/catalog data. Back up the
+   database and verify the target `DATABASE_URL` before running them against
+   production Neon.
    The admin password is stored as a scrypt hash, not plain text. Re-running
    `auth:seed-admin` updates the admin credentials from `.env`.
    Redis is optional and only used for product caching. To enable it, install
    and start Redis separately and set `REDIS_URL` in `server/.env`.
    The admin Orders, Customers, Delivery partners, Settings, and Staff directory
-   tables are part of the Drizzle schema. Apply the schema to a backed-up
-   development/staging database and review the generated changes before
-   updating a production Neon database. The new tables are not populated from
-   browser demo data; existing demo records are not automatically migrated.
-   For an existing catalog database, run `npm run db:push` from `server`
-   against a backed-up development/staging database to add the new tables;
-   verify that diff before applying the schema to production.
+   tables are part of the Drizzle schema. The dedicated CRUD schema command
+   creates these tables only; it does not populate browser demo data or migrate
+   existing demo records.
 3. Configure Firebase Authentication and a Firebase Admin service account for
    customer payment endpoints. Set `FIREBASE_SERVICE_ACCOUNT_PATH` in
    `server/.env`. Do not expose service-account or Razorpay secrets to the
