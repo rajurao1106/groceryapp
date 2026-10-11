@@ -104,7 +104,10 @@ class _HomePlaceholderScreenState extends ConsumerState<HomePlaceholderScreen>
               sliver: SliverToBoxAdapter(
                 child: _HeaderRow(
                   selectedAddress: selectedAddress,
-                  onTapLocation: () => context.push('/location'),
+                  onTapLocation: () => context.push(
+                    '/location',
+                    extra: {'returnPath': '/home'},
+                  ),
                   onTapProfile: () => context.push('/profile'),
                 ),
               ),

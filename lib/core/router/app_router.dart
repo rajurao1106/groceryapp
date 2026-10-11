@@ -82,7 +82,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/location',
-        builder: (context, state) => const LocationSelectionScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? const {};
+          return LocationSelectionScreen(
+            returnPath: extra['returnPath'] as String?,
+          );
+        },
       ),
       GoRoute(
         path: '/location-map',
@@ -92,6 +97,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             address: extra['address'] as String? ?? 'Bengaluru',
             latitude: (extra['lat'] as num?)?.toDouble() ?? 12.9716,
             longitude: (extra['lng'] as num?)?.toDouble() ?? 77.5946,
+            returnPath: extra['returnPath'] as String?,
           );
         },
       ),

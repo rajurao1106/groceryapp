@@ -18,7 +18,9 @@ final placesRepositoryProvider = Provider<PlacesRepository>(
 );
 
 class LocationSelectionScreen extends ConsumerStatefulWidget {
-  const LocationSelectionScreen({super.key});
+  const LocationSelectionScreen({super.key, this.returnPath});
+
+  final String? returnPath;
 
   @override
   ConsumerState<LocationSelectionScreen> createState() =>
@@ -127,7 +129,7 @@ class _LocationSelectionScreenState
       );
 
       if (!mounted) return;
-      context.go(
+      context.push(
         '/location-map',
         extra: {
           'address': formattedAddress.isNotEmpty
@@ -136,6 +138,7 @@ class _LocationSelectionScreenState
           'lat': position.latitude,
           'lng': position.longitude,
           'serviceAreaValid': serviceAreaValid,
+          'returnPath': widget.returnPath,
         },
       );
     } catch (error) {
@@ -156,13 +159,14 @@ class _LocationSelectionScreenState
       return;
     }
 
-    context.go(
+    context.push(
       '/location-map',
       extra: {
         'address': query,
         'lat': 12.9716,
         'lng': 77.5946,
         'serviceAreaValid': true,
+        'returnPath': widget.returnPath,
       },
     );
   }

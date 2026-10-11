@@ -222,7 +222,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   void _changeAddress() {
-    context.push('/location');
+    context.push('/location', extra: {'returnPath': '/checkout'});
   }
 
   Future<void> _proceedToPay() async {

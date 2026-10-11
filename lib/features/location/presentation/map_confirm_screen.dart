@@ -17,11 +17,13 @@ class MapConfirmScreen extends ConsumerStatefulWidget {
     required this.address,
     required this.latitude,
     required this.longitude,
+    this.returnPath,
   });
 
   final String address;
   final double latitude;
   final double longitude;
+  final String? returnPath;
 
   @override
   ConsumerState<MapConfirmScreen> createState() => _MapConfirmScreenState();
@@ -88,7 +90,7 @@ class _MapConfirmScreenState extends ConsumerState<MapConfirmScreen> {
     await ref.read(selectedAddressProvider.notifier).save(address);
     if (!mounted) return;
     setState(() => _isSaving = false);
-    context.go('/home');
+    context.go(widget.returnPath ?? '/home');
   }
 
   @override
